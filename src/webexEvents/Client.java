@@ -94,6 +94,8 @@ public class Client {
                 } else {
                     Thread.sleep(sleep);
                 }
+            } finally {
+                httpClient.close();
             }
         }
 
