@@ -1,4 +1,4 @@
-package webexEvents;
+package com.webex.events;
 
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;

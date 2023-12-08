@@ -1,4 +1,4 @@
-package webexEvents;
+package com.webex.events;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import webexEvents.exceptions.*;
+import com.webex.events.exceptions.*;
 
 public class Client {
     public static final String VERSION = "0.1.0";
@@ -94,8 +94,6 @@ public class Client {
                 } else {
                     Thread.sleep(sleep);
                 }
-            } finally {
-                httpClient.close();
             }
         }
 

@@ -1,4 +1,4 @@
-package webexEvents;
+package com.webex.events;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
