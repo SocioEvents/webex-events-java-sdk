@@ -1,6 +1,8 @@
 package webexEvents;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -8,6 +10,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +28,15 @@ public class Client {
             Configuration config
     ) throws IOException, InterruptedException, Exception {
 
+        if (headers.containsKey("Idempotency-Key")) {
+            Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+
+            if (!regex.matcher(headers.get("Idempotency-Key").toString()).matches()) {
+                throw new RuntimeException("Idempotency-Key must be UUID format");
+            }
+
+        }
+
         HashMap<String, Object> params = new HashMap<>();
         params.put("query", query);
         params.put("operationName", operationName);
@@ -40,6 +52,7 @@ public class Client {
         headers.put("X-Sdk-Name", "Java SDK");
         headers.put("X-Sdk-Version", VERSION);
         headers.put("X-Sdk-Lang-Version", System.getProperty("java.version"));
+        headers.put("User-Agent", userAgent());
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(config.getUri());
@@ -64,6 +77,8 @@ public class Client {
                 response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
                 response.setRetryCount(retryCount);
                 if (response.status() == 200) {
+                    long endTime = System.currentTimeMillis();
+                    response.setTimeSpentInMs((int)(endTime - startTime));
                    break;
                 } else {
                     manageErrorState(response);
@@ -88,6 +103,20 @@ public class Client {
         response.setTimeSpentInMs((int)(endTime - startTime));
 
         return response;
+    }
+
+    private static String userAgent(){
+        String os = System.getProperty("os.name");
+        String javaVersion = System.getProperty("java.version");
+
+        String hostName = "";
+        try {
+            InetAddress id = InetAddress.getLocalHost();
+            hostName = id.getHostName();
+        } catch (UnknownHostException ignored) {
+        }
+
+        return String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", VERSION, os, hostName, javaVersion);
     }
 
     private static void manageErrorState(Response response) throws JsonProcessingException, Exception {

@@ -55,7 +55,7 @@ public class Response {
     }
 
     public int setTimeSpentInMs(int timeSpendInMs) {
-        return this.timeSpendInMs;
+        return this.timeSpendInMs = timeSpendInMs;
     }
 
 }
