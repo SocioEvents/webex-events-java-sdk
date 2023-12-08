@@ -18,15 +18,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.exceptions.*;
 
 public class Client {
-    public static final String VERSION = "0.1.0";
-
     public static Response query(
             String query,
             String operationName,
             HashMap<String, Object> variables,
             HashMap<String, Object> headers,
             Configuration config
-    ) throws IOException, InterruptedException, Exception {
+    ) throws Exception {
 
         if (headers.containsKey("Idempotency-Key")) {
             Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
@@ -50,7 +48,7 @@ public class Client {
         headers.put("Content-Type", "application/json");
         headers.put("Authorization", "Bearer " + config.getAccessToken());
         headers.put("X-Sdk-Name", "Java SDK");
-        headers.put("X-Sdk-Version", VERSION);
+        headers.put("X-Sdk-Version", PomReader.sdkVersion());
         headers.put("X-Sdk-Lang-Version", System.getProperty("java.version"));
         headers.put("User-Agent", userAgent());
 
@@ -116,7 +114,7 @@ public class Client {
         } catch (UnknownHostException ignored) {
         }
 
-        return String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", VERSION, os, hostName, javaVersion);
+        return String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", PomReader.sdkVersion(), os, hostName, javaVersion);
     }
 
     private static void manageErrorState(Response response) throws JsonProcessingException, Exception {

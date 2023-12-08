@@ -183,6 +183,7 @@ class ClientTest {
         Response response = ((RequestTimeoutError) exception).response();
         assertTrue(response.status() == 408);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
@@ -196,6 +197,7 @@ class ClientTest {
         Response response = ((ConflictError) exception).response();
         assertTrue(response.status() == 409);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
@@ -268,6 +270,7 @@ class ClientTest {
         Response response = ((SecondBasedQuotaIsReachedError) exception).response();
         assertTrue(response.status() == 429);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
@@ -294,6 +297,7 @@ class ClientTest {
         Response response = ((BadGatewayError) exception).response();
         assertTrue(response.status() == 502);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
@@ -307,6 +311,7 @@ class ClientTest {
         Response response = ((ServiceUnavailableError) exception).response();
         assertTrue(response.status() == 503);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
@@ -320,6 +325,7 @@ class ClientTest {
         Response response = ((GatewayTimeoutError) exception).response();
         assertTrue(response.status() == 504);
         assertEquals(response.getRetryCount(), 2);
+        assertTrue(response.getTimeSpendInMs() > 0);
     }
 
     @Test
