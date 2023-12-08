@@ -76,9 +76,9 @@ public class Client {
             try {
                 response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
                 response.setRetryCount(retryCount);
+                long endTime = System.currentTimeMillis();
+                response.setTimeSpentInMs((int)(endTime - startTime));
                 if (response.status() == 200) {
-                    long endTime = System.currentTimeMillis();
-                    response.setTimeSpentInMs((int)(endTime - startTime));
                    break;
                 } else {
                     manageErrorState(response);
@@ -125,9 +125,9 @@ public class Client {
 
         switch (response.status()) {
             case 400:
-                if (Objects.equals(errorResponse.extensions.get("code").toString(), "INVALID_TOKEN")) {
+                if (Objects.equals(errorResponse.extensions.get("code").textValue(), "INVALID_TOKEN")) {
                     throw new InvalidAccessTokenError(response);
-                } else if (Objects.equals(errorResponse.extensions.get("code").toString(), "TOKEN_IS_EXPIRED")) {
+                } else if (Objects.equals(errorResponse.extensions.get("code").textValue(), "TOKEN_IS_EXPIRED")) {
                     throw new AccessTokenIsExpiredError(response);
                 } else {
                     throw new BadRequestError(response);
@@ -149,13 +149,13 @@ public class Client {
             case 429:
                 JsonNode dailyAvailableCost = errorResponse.extensions.get("dailyAvailableCost");
 
-                if (!dailyAvailableCost.isNull() && Integer.valueOf(dailyAvailableCost.toString()) < 1) {
+                if (dailyAvailableCost != null && dailyAvailableCost.intValue() < 1) {
                     throw new DailyQuotaIsReachedError(response);
                 }
 
                 JsonNode availableCost = errorResponse.extensions.get("availableCost");
 
-                if (!availableCost.isNull() && Integer.valueOf(availableCost.toString()) < 1) {
+                if (availableCost != null && availableCost.intValue() < 1) {
                     throw new SecondBasedQuotaIsReachedError(response);
                 }
             case 500:

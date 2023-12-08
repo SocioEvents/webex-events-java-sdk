@@ -27,6 +27,9 @@ public class Response {
     }
 
     public String body() {
+        if (this.response.body() == null) {
+            return "{}";
+        }
         return this.response.body().toString();
     }
 
