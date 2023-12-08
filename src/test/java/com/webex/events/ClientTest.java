@@ -12,6 +12,7 @@ import org.mockito.quality.Strictness;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,6 +52,29 @@ class ClientTest {
                 .setAccessToken("sk_test_token_0190101010");
         variables.put("isoCode", "USD");
         return Client.query(graphqlQuery, operationName, variables, headers, config);
+    }
+
+    @Test
+    void invalidUUIDTest() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+
+        final String graphqlQuery = "query Currency($isoCode: String!){ currency(isoCode: $isoCode) { isoCode}}";
+        final String operationName = "Currency";
+        final HashMap<String, Object> variables = new HashMap<>();
+        final HashMap<String, Object> headers = new HashMap<>();
+        headers.put("Idempotency-Key", UUID.randomUUID() + "invalid");
+
+        final Configuration config = new Configuration()
+                .setMaxRetries(3)
+                .setAccessToken("sk_test_token_0190101010");
+        variables.put("isoCode", "USD");
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            Client.query(graphqlQuery, operationName, variables, headers, config);
+        });
+
+        assertTrue(Objects.equals(exception.getMessage(), "Idempotency-Key must be UUID format"));
     }
 
     @Test
