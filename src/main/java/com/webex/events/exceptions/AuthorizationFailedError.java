@@ -1,6 +1,6 @@
-package webexEvents.exceptions;
+package com.webex.events.exceptions;
 
-import webexEvents.Response;
+import com.webex.events.Response;
 
 public class AuthorizationFailedError extends BaseException{
     public AuthorizationFailedError(Response response){

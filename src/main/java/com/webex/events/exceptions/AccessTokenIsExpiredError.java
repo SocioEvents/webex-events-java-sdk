@@ -1,6 +1,6 @@
-package webexEvents.exceptions;
+package com.webex.events.exceptions;
 
-import webexEvents.Response;
+import com.webex.events.Response;
 
 public class AccessTokenIsExpiredError extends BaseException{
     public AccessTokenIsExpiredError(Response response){

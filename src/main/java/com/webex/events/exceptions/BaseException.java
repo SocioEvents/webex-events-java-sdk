@@ -1,6 +1,6 @@
-package webexEvents.exceptions;
+package com.webex.events.exceptions;
 
-import webexEvents.Response;
+import com.webex.events.Response;
 
 abstract class BaseException extends Exception implements ExceptionInterface{
 

@@ -1,6 +1,5 @@
-package webexEvents;
+package com.webex.events;
 
-import java.io.ObjectInputFilter;
 import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
