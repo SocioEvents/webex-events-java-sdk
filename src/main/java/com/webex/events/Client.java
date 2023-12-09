@@ -35,8 +35,6 @@ public class Client {
         params.put("operationName", operationName);
         params.put("variables", variables);
 
-        HttpClient httpClient = HttpClient.newHttpClient();
-
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(params);
 
@@ -60,10 +58,12 @@ public class Client {
                 .build();
 
         long startTime = System.currentTimeMillis();
+        HttpClient httpClient = HttpClient.newHttpClient();
         Response response = doOrRetryTheRequest(config, httpClient, request);
         long endTime = System.currentTimeMillis();
 
         response.setTimeSpentInMs((int) (endTime - startTime));
+
         if (response.status() > 299) {
             manageErrorState(response);
         }
