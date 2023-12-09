@@ -19,6 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public class Client {
+
+    public static final int[] RETRIABLE_HTTP_STATUSES = {408, 409, 429, 502, 503, 504};
+
     public static Response query(
             String query,
             String operationName,
@@ -72,14 +75,13 @@ public class Client {
     }
 
     private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request) {
-        int[] retriableHttpStatuses = new int[]{408, 409, 429, 502, 503, 504};
         RetryConfig retryConfig = RetryConfig.custom()
                 .maxAttempts(config.getMaxRetries())
                 .waitDuration(Duration.ofMillis(500))
                 .failAfterMaxAttempts(false)
                 .retryOnResult(response -> {
                     ObjectMapper mapper = new ObjectMapper();
-                    ErrorResponse errorResponse = null;
+                    ErrorResponse errorResponse;
                     try {
                         errorResponse = mapper.readValue(((Response)response).body(), ErrorResponse.class);
                     } catch (JsonProcessingException e) {
@@ -89,7 +91,7 @@ public class Client {
                     if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
                         return false;
                     }else {
-                        return IntStream.of(retriableHttpStatuses).anyMatch(x -> x == ((Response) response).status());
+                        return IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == ((Response) response).status());
                     }
                 })
                 .build();
