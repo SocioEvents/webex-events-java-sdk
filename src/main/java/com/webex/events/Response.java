@@ -9,6 +9,15 @@ public class Response {
 
     private int retryCount = 0;
     private int timeSpendInMs = 0;
+    private ErrorResponse errorResponse = null;
+
+    public ErrorResponse getErrorResponse() {
+        return errorResponse;
+    }
+
+    public void setErrorResponse(ErrorResponse errorResponse) {
+        this.errorResponse = errorResponse;
+    }
 
     public Response(HttpResponse response) {
         this.response = response;

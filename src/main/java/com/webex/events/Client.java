@@ -1,5 +1,14 @@
 package com.webex.events;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.webex.events.exceptions.*;
+import io.github.resilience4j.core.functions.CheckedSupplier;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
+import io.github.resilience4j.retry.RetryConfig;
+
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
@@ -8,13 +17,9 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.webex.events.exceptions.*;
+import java.util.stream.IntStream;
 
 public class Client {
     public static Response query(
@@ -23,7 +28,7 @@ public class Client {
             HashMap<String, Object> variables,
             HashMap<String, Object> headers,
             Configuration config
-    ) throws InvalidUUIDFormatError, AccessTokenIsRequiredError, Exception {
+    ) throws Exception {
 
         if (headers.containsKey("Idempotency-Key")) {
             Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
@@ -67,46 +72,71 @@ public class Client {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        int retryCount = 0;
-        double intervalRate = 1.4;
-        int sleep = 250;
-        Response response = null;
         long startTime = System.currentTimeMillis();
-        while (retryCount < config.getMaxRetries()) {
-            sleep = (int)(intervalRate * sleep);
-            try {
-                response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
-                response.setRetryCount(retryCount);
-                long endTime = System.currentTimeMillis();
-                response.setTimeSpentInMs((int)(endTime - startTime));
-                if (response.status() == 200) {
-                   break;
-                } else {
-                    manageErrorState(response);
-                }
-            } catch (SecondBasedQuotaIsReachedError | RequestTimeoutError | ConflictError | BadGatewayError |
-                     ServiceUnavailableError | GatewayTimeoutError e) {
-
-                retryCount++;
-                if (retryCount == config.getMaxRetries()) {
-                    long endTime = System.currentTimeMillis();
-                    response.setTimeSpentInMs((int)(endTime - startTime));
-                    throw e;
-                } else {
-                    Thread.sleep(sleep);
-                }
-            }
-        }
-
-        assert response != null;
-
+        Response response = doOrRetryTheRequest(config, httpClient, request);
         long endTime = System.currentTimeMillis();
-        response.setTimeSpentInMs((int)(endTime - startTime));
+
+        response.setTimeSpentInMs((int) (endTime - startTime));
+        if (response.status() > 299) {
+            manageErrorState(response);
+        }
 
         return response;
     }
 
-    private static String userAgent(){
+    private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request) {
+        int[] retriableHttpStatuses = new int[]{408, 409, 429, 502, 503, 504};
+        RetryConfig retryConfig = RetryConfig.custom()
+                .maxAttempts(config.getMaxRetries())
+                .waitDuration(Duration.ofMillis(500))
+                .failAfterMaxAttempts(false)
+                .retryOnResult(response -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ErrorResponse errorResponse = null;
+                    try {
+                        errorResponse = mapper.readValue(((Response)response).body(), ErrorResponse.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    ((Response)response).setErrorResponse(errorResponse);
+                    if (errorResponse != null && errorResponse.getDailyAvailableCostIsReached()) {
+                        return false;
+                    }else {
+                        return IntStream.of(retriableHttpStatuses).anyMatch(x -> x == ((Response) response).status());
+                    }
+                })
+                .build();
+
+        // Create a RetryRegistry with a custom global configuration
+        RetryRegistry registry = RetryRegistry.of(retryConfig);
+
+        // Get or create a Retry from the registry -
+        // Retry will be backed by the default config
+        Retry retryWithDefaultConfig = registry.retry("custom");
+
+        AtomicInteger retryCount = new AtomicInteger();
+        retryWithDefaultConfig.getEventPublisher().onRetry(retryEvent -> {
+            retryCount.getAndIncrement();
+        });
+        CheckedSupplier<Response> retryableSupplier = Retry
+                .decorateCheckedSupplier(retryWithDefaultConfig, () -> {
+                    try {
+                        return new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+        try {
+            Response response = retryableSupplier.get();
+            response.setRetryCount(retryCount.intValue());
+            return response;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String userAgent() {
         String os = System.getProperty("os.name");
         String javaVersion = System.getProperty("java.version");
 
@@ -121,14 +151,12 @@ public class Client {
     }
 
     private static void manageErrorState(Response response) throws JsonProcessingException, Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        ErrorResponse errorResponse = mapper.readValue(response.body(), ErrorResponse.class);
-
+        ErrorResponse errorResponse = response.getErrorResponse();
         switch (response.status()) {
             case 400:
-                if (Objects.equals(errorResponse.extensions.get("code").textValue(), "INVALID_TOKEN")) {
+                if (errorResponse.getIsInvalidToken()) {
                     throw new InvalidAccessTokenError(response);
-                } else if (Objects.equals(errorResponse.extensions.get("code").textValue(), "TOKEN_IS_EXPIRED")) {
+                } else if (errorResponse.getIsTokenIsExpired()) {
                     throw new AccessTokenIsExpiredError(response);
                 } else {
                     throw new BadRequestError(response);
@@ -148,15 +176,11 @@ public class Client {
             case 422:
                 throw new UnprocessableEntityError(response);
             case 429:
-                JsonNode dailyAvailableCost = errorResponse.extensions.get("dailyAvailableCost");
-
-                if (dailyAvailableCost != null && dailyAvailableCost.intValue() < 1) {
+                if (errorResponse.getDailyAvailableCostIsReached()) {
                     throw new DailyQuotaIsReachedError(response);
                 }
 
-                JsonNode availableCost = errorResponse.extensions.get("availableCost");
-
-                if (availableCost != null && availableCost.intValue() < 1) {
+                if (errorResponse.getAvailableCostIsReached()) {
                     throw new SecondBasedQuotaIsReachedError(response);
                 }
             case 500:
@@ -172,7 +196,7 @@ public class Client {
                     throw new ClientError(response);
                 } else if (response.status() >= 500 && response.status() < 600) {
                     throw new ServerError(response);
-                }else {
+                } else {
                     throw new UnknownStatusError(response);
                 }
         }

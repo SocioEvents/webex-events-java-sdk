@@ -48,7 +48,7 @@ class ClientTest {
         headers.put("Idempotency-Key", UUID.randomUUID().toString());
 
         final Configuration config = new Configuration()
-                .setMaxRetries(3)
+                .setMaxRetries((byte) 3)
                 .setAccessToken("sk_test_token_0190101010");
         variables.put("isoCode", "USD");
         return Client.query(graphqlQuery, operationName, variables, headers, config);
@@ -82,7 +82,7 @@ class ClientTest {
         final HashMap<String, Object> variables = new HashMap<>();
         final HashMap<String, Object> headers = new HashMap<>();
         final Configuration config = new Configuration()
-                .setMaxRetries(3)
+                .setMaxRetries((byte) 3)
                 .setAccessToken("sk_test_token_0190101010");
         Response response = Client.query(graphqlQuery, operationName, variables, headers, config);
         assertTrue(response.status() == 200);
@@ -101,7 +101,7 @@ class ClientTest {
         headers.put("Idempotency-Key", UUID.randomUUID() + "invalid");
 
         final Configuration config = new Configuration()
-                .setMaxRetries(3)
+                .setMaxRetries((byte) 3)
                 .setAccessToken("sk_test_token_0190101010");
         variables.put("isoCode", "USD");
 
