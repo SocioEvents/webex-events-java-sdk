@@ -1,14 +1,10 @@
 package com.webex.events;
 
-import java.net.URI;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class Configuration {
     private String accessToken;
-    private int timeout = 30;
+    private byte timeout = 30;
 
-    private int maxRetries = 5;
+    private byte maxRetries = 5;
 
     public String getAccessToken() {
         return accessToken;
@@ -23,7 +19,8 @@ public class Configuration {
         return timeout;
     }
 
-    public Configuration setTimeout(int timeout) {
+    public Configuration setTimeout(byte timeout) {
+        assert timeout >= (byte) 1;
         this.timeout = timeout;
         return this;
     }
@@ -36,19 +33,5 @@ public class Configuration {
         assert maxRetries >= (byte) 0;
         this.maxRetries = maxRetries;
         return this;
-    }
-
-    public URI getUri() {
-        Pattern pattern = Pattern.compile("sk_live_");
-        Matcher matcher = pattern.matcher(this.getAccessToken());
-        String path = "/graphql";
-        String url ;
-        if (matcher.find()) {
-            url = "https://public.api.socio.events" + path;
-        } else {
-            url = "https://public.sandbox-api.socio.events" + path;
-        }
-
-        return URI.create(url);
     }
 }

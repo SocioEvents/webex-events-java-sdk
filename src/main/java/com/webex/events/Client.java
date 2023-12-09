@@ -46,7 +46,7 @@ public class Client {
         headers.put("User-Agent", Helpers.getUserAgent());
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(config.getUri());
+                .uri(Helpers.getUri(config.getAccessToken()));
 
         for (Map.Entry<String, Object> header : headers.entrySet()) {
             requestBuilder.header(header.getKey(), (String) header.getValue());

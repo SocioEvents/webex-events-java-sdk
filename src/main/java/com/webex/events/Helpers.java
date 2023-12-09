@@ -4,7 +4,9 @@ import com.webex.events.exceptions.AccessTokenIsRequiredError;
 import com.webex.events.exceptions.InvalidUUIDFormatError;
 
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Helpers {
@@ -38,5 +40,19 @@ public class Helpers {
         }
 
         return String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", PomReader.sdkVersion(), os, hostName, javaVersion);
+    }
+
+    public static URI getUri(String accessToken) {
+        Pattern pattern = Pattern.compile("sk_live_");
+        Matcher matcher = pattern.matcher(accessToken);
+        String path = "/graphql";
+        String url ;
+        if (matcher.find()) {
+            url = "https://public.api.socio.events" + path;
+        } else {
+            url = "https://public.sandbox-api.socio.events" + path;
+        }
+
+        return URI.create(url);
     }
 }
