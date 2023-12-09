@@ -9,9 +9,6 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/SocioE
 * Commit and push until you are happy with your contribution.
 * Make sure to add tests for it.
 * Add an entry to the [Changelog](CHANGELOG.md) accordingly.
-* Make sure the test suite is passing and the code you wrote doesn't produce
-  RuboCop offenses.
-* Make sure RBS checks are passed with `rake type_check` or just `rake` command.
 * [Squash related commits together][4].
 * Open a [pull request][3] that relates to *only* one subject with a clear title
   and description in grammatically correct, complete sentences.
