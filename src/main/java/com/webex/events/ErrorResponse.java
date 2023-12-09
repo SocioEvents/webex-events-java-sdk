@@ -21,20 +21,20 @@ public class ErrorResponse {
     }
 
     public boolean dailyAvailableCostIsReached() {
-        if (extensions != null){
-            JsonNode availableCost = extensions.get("dailyAvailableCost");
-            return availableCost != null && availableCost.intValue() < 1;
-        }else {
+        if (extensions == null) {
             return false;
         }
+
+        JsonNode availableCost = extensions.get("dailyAvailableCost");
+        return availableCost != null && availableCost.intValue() < 1;
     }
 
     public boolean availableCostIsReached() {
-        if (extensions != null) {
-            JsonNode availableCost = extensions.get("availableCost");
-            return availableCost != null && availableCost.intValue() < 1;
-        }else {
+        if (extensions == null) {
             return false;
         }
+
+        JsonNode availableCost = extensions.get("availableCost");
+        return availableCost != null && availableCost.intValue() < 1;
     }
 }

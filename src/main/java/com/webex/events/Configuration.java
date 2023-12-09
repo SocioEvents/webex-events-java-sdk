@@ -30,7 +30,7 @@ public class Configuration {
     }
 
     public Configuration setMaxRetries(byte maxRetries) {
-        assert maxRetries >= (byte) 0;
+        assert maxRetries >= (byte) 1;
         this.maxRetries = maxRetries;
         return this;
     }
