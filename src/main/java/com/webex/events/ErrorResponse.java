@@ -12,15 +12,15 @@ public class ErrorResponse {
         return extensions.get("code").textValue();
     }
 
-    public boolean getIsInvalidToken() {
+    public boolean isInvalidToken() {
         return Objects.equals(getCode(), "INVALID_TOKEN");
     }
 
-    public boolean getIsTokenIsExpired() {
+    public boolean isTokenIsExpired() {
         return Objects.equals(getCode(), "TOKEN_IS_EXPIRED");
     }
 
-    public boolean getDailyAvailableCostIsReached() {
+    public boolean dailyAvailableCostIsReached() {
         if (extensions != null){
             JsonNode availableCost = extensions.get("dailyAvailableCost");
             return availableCost != null && availableCost.intValue() < 1;
@@ -29,7 +29,7 @@ public class ErrorResponse {
         }
     }
 
-    public boolean getAvailableCostIsReached() {
+    public boolean availableCostIsReached() {
         if (extensions != null) {
             JsonNode availableCost = extensions.get("availableCost");
             return availableCost != null && availableCost.intValue() < 1;

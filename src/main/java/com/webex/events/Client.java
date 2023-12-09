@@ -99,7 +99,7 @@ public class Client {
                         throw new RuntimeException(e);
                     }
                     ((Response)response).setErrorResponse(errorResponse);
-                    if (errorResponse != null && errorResponse.getDailyAvailableCostIsReached()) {
+                    if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
                         return false;
                     }else {
                         return IntStream.of(retriableHttpStatuses).anyMatch(x -> x == ((Response) response).status());
@@ -154,9 +154,9 @@ public class Client {
         ErrorResponse errorResponse = response.getErrorResponse();
         switch (response.status()) {
             case 400:
-                if (errorResponse.getIsInvalidToken()) {
+                if (errorResponse.isInvalidToken()) {
                     throw new InvalidAccessTokenError(response);
-                } else if (errorResponse.getIsTokenIsExpired()) {
+                } else if (errorResponse.isTokenIsExpired()) {
                     throw new AccessTokenIsExpiredError(response);
                 } else {
                     throw new BadRequestError(response);
@@ -176,11 +176,11 @@ public class Client {
             case 422:
                 throw new UnprocessableEntityError(response);
             case 429:
-                if (errorResponse.getDailyAvailableCostIsReached()) {
+                if (errorResponse.dailyAvailableCostIsReached()) {
                     throw new DailyQuotaIsReachedError(response);
                 }
 
-                if (errorResponse.getAvailableCostIsReached()) {
+                if (errorResponse.availableCostIsReached()) {
                     throw new SecondBasedQuotaIsReachedError(response);
                 }
             case 500:
