@@ -103,7 +103,7 @@ public class Client {
 
         AtomicInteger retryCount = new AtomicInteger();
         retryWithDefaultConfig.getEventPublisher().onRetry(retryEvent -> {
-            retryCount.getAndIncrement();
+            retryCount.incrementAndGet();
         });
         CheckedSupplier<Response> retryableSupplier = Retry
                 .decorateCheckedSupplier(retryWithDefaultConfig, () -> {
