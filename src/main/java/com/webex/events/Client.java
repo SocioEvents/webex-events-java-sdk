@@ -9,8 +9,6 @@ import io.github.resilience4j.retry.RetryRegistry;
 import io.github.resilience4j.retry.RetryConfig;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -18,7 +16,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 public class Client {
@@ -30,18 +27,8 @@ public class Client {
             Configuration config
     ) throws Exception {
 
-        if (headers.containsKey("Idempotency-Key")) {
-            Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
-
-            if (!regex.matcher(headers.get("Idempotency-Key").toString()).matches()) {
-                throw new InvalidUUIDFormatError("Idempotency-Key must be UUID format");
-            }
-
-        }
-
-        if (config.getAccessToken() == null || config.getAccessToken().isEmpty()) {
-            throw new AccessTokenIsRequiredError("Access token is missing.");
-        }
+        Helpers.validateIdempotencyKey(headers.get("Idempotency-Key"));
+        Helpers.validateAccessTokenExistence(config.getAccessToken());
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("query", query);
@@ -58,7 +45,7 @@ public class Client {
         headers.put("X-Sdk-Name", "Java SDK");
         headers.put("X-Sdk-Version", PomReader.sdkVersion());
         headers.put("X-Sdk-Lang-Version", System.getProperty("java.version"));
-        headers.put("User-Agent", userAgent());
+        headers.put("User-Agent", Helpers.getUserAgent());
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(config.getUri());
@@ -134,20 +121,6 @@ public class Client {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static String userAgent() {
-        String os = System.getProperty("os.name");
-        String javaVersion = System.getProperty("java.version");
-
-        String hostName = "";
-        try {
-            InetAddress id = InetAddress.getLocalHost();
-            hostName = id.getHostName();
-        } catch (UnknownHostException ignored) {
-        }
-
-        return String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", PomReader.sdkVersion(), os, hostName, javaVersion);
     }
 
     private static void manageErrorState(Response response) throws JsonProcessingException, Exception {
