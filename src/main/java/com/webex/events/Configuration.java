@@ -40,11 +40,12 @@ public class Configuration {
     public URI getUri() {
         Pattern pattern = Pattern.compile("sk_live_");
         Matcher matcher = pattern.matcher(this.getAccessToken());
+        String path = "/graphql";
         String url ;
         if (matcher.find()) {
-            url = "https://public.api.socio.events";
+            url = "https://public.api.socio.events" + path;
         } else {
-            url = "https://public.sandbox-api.socio.events/graphql";
+            url = "https://public.sandbox-api.socio.events" + path;
         }
 
         return URI.create(url);

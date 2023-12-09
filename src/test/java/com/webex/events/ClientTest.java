@@ -54,7 +54,42 @@ class ClientTest {
         return Client.query(graphqlQuery, operationName, variables, headers, config);
     }
 
+
     @Test
+    @DisplayName("Should raise AccessTokenIsRequired exception without given access token")
+    void withoutAccessToken() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
+        final String operationName = "CurrenciesList";
+        final HashMap<String, Object> variables = new HashMap<>();
+        final HashMap<String, Object> headers = new HashMap<>();
+        final Configuration config = new Configuration();
+        Exception exception = assertThrows(AccessTokenIsRequiredError.class, () -> {
+            Client.query(graphqlQuery, operationName, variables, headers, config);
+        });
+
+        assertTrue(Objects.equals(exception.getMessage(), "Access token is missing."));
+    }
+
+    @Test
+    @DisplayName("Should not raise without given parameters")
+    void withoutParams() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
+        final String operationName = "CurrenciesList";
+        final HashMap<String, Object> variables = new HashMap<>();
+        final HashMap<String, Object> headers = new HashMap<>();
+        final Configuration config = new Configuration()
+                .setMaxRetries(3)
+                .setAccessToken("sk_test_token_0190101010");
+        Response response = Client.query(graphqlQuery, operationName, variables, headers, config);
+        assertTrue(response.status() == 200);
+    }
+
+    @Test
+    @DisplayName("Should raise InvalidUUIDFormatError exception if given Idempotency Key is not UUID format.")
     void invalidUUIDTest() throws Exception {
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(),any())).thenReturn(httpResponse);
@@ -70,7 +105,7 @@ class ClientTest {
                 .setAccessToken("sk_test_token_0190101010");
         variables.put("isoCode", "USD");
 
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        Exception exception = assertThrows(InvalidUUIDFormatError.class, () -> {
             Client.query(graphqlQuery, operationName, variables, headers, config);
         });
 

@@ -23,15 +23,19 @@ public class Client {
             HashMap<String, Object> variables,
             HashMap<String, Object> headers,
             Configuration config
-    ) throws Exception {
+    ) throws InvalidUUIDFormatError, AccessTokenIsRequiredError, Exception {
 
         if (headers.containsKey("Idempotency-Key")) {
             Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
             if (!regex.matcher(headers.get("Idempotency-Key").toString()).matches()) {
-                throw new RuntimeException("Idempotency-Key must be UUID format");
+                throw new InvalidUUIDFormatError("Idempotency-Key must be UUID format");
             }
 
+        }
+
+        if (config.getAccessToken() == null || config.getAccessToken().isEmpty()) {
+            throw new AccessTokenIsRequiredError("Access token is missing.");
         }
 
         HashMap<String, Object> params = new HashMap<>();
@@ -169,7 +173,7 @@ public class Client {
                 } else if (response.status() >= 500 && response.status() < 600) {
                     throw new ServerError(response);
                 }else {
-                    throw new RuntimeException();
+                    throw new UnknownStatusError(response);
                 }
         }
     }
