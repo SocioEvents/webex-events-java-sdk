@@ -6,7 +6,7 @@
     <artifactId>webex-events</artifactId>
     <version>0.1.0</version>
     <build>
-        <testSourceDirectory>${project.basedir}/src/test/java/com/webex/events</testSourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
     </build>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
