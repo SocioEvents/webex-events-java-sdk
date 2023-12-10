@@ -1,6 +1,11 @@
 package com.webex.events;
 
 public class RateLimiter {
+    private static final String SECONDLY_CALL_LIMIT = "x-secondly-call-limit";
+    private static final String DAILY_RETRY_AFTER = "x-daily-retry-after";
+    private static final String SECONDLY_RETRY_AFTER = "x-secondly-retry-after";
+    private static final String DAILY_CALL_LIMIT = "x-daily-call-limit";
+
     private int usedSecondBasedCost = 0;
     private int secondBasedCostThreshold = 0;
     private int usedDailyBasedCost = 0;
@@ -13,8 +18,8 @@ public class RateLimiter {
         if (response.headers() == null) {
             return;
         }
-        if (!response.headers().allValues("x-daily-call-limit").isEmpty()) {
-            String dailyCallLimit = response.headers().allValues("x-daily-call-limit").get(0);
+        if (!response.headers().allValues(DAILY_CALL_LIMIT).isEmpty()) {
+            String dailyCallLimit = response.headers().allValues(DAILY_CALL_LIMIT).get(0);
             if (dailyCallLimit != null && !dailyCallLimit.isEmpty()) {
                 String[] parts = dailyCallLimit.split("/");
                 this.usedDailyBasedCost = Integer.parseInt(parts[0]);
@@ -22,8 +27,8 @@ public class RateLimiter {
             }
         }
 
-        if (!response.headers().allValues("x-secondly-call-limit").isEmpty()) {
-            String secondlyCallLimit = response.headers().allValues("x-secondly-call-limit").get(0);
+        if (!response.headers().allValues(SECONDLY_CALL_LIMIT).isEmpty()) {
+            String secondlyCallLimit = response.headers().allValues(SECONDLY_CALL_LIMIT).get(0);
             if (secondlyCallLimit != null && !secondlyCallLimit.isEmpty()) {
                 String[] parts = secondlyCallLimit.split("/");
                 this.usedSecondBasedCost = Integer.parseInt(parts[0]);
@@ -31,13 +36,13 @@ public class RateLimiter {
             }
         }
 
-        if (!response.headers().allValues("x-daily-retry-after").isEmpty()) {
-            String dailyRetryAfter = response.headers().allValues("x-daily-retry-after").get(0);
+        if (!response.headers().allValues(DAILY_RETRY_AFTER).isEmpty()) {
+            String dailyRetryAfter = response.headers().allValues(DAILY_RETRY_AFTER).get(0);
             this.dailyRetryAfter = Integer.parseInt(dailyRetryAfter);
         }
 
-        if (!response.headers().allValues("x-secondly-retry-after").isEmpty()) {
-            String secondlyRetryAfter = response.headers().allValues("x-secondly-retry-after").get(0);
+        if (!response.headers().allValues(SECONDLY_RETRY_AFTER).isEmpty()) {
+            String secondlyRetryAfter = response.headers().allValues(SECONDLY_RETRY_AFTER).get(0);
             this.secondlyRetryAfter = Integer.parseInt(secondlyRetryAfter);
         }
     }
