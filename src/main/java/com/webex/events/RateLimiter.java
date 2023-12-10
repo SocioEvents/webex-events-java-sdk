@@ -1,5 +1,7 @@
 package com.webex.events;
 
+import java.net.http.HttpHeaders;
+
 public class RateLimiter {
     private static final String SECONDLY_CALL_LIMIT = "x-secondly-call-limit";
     private static final String DAILY_RETRY_AFTER = "x-daily-retry-after";
@@ -12,37 +14,36 @@ public class RateLimiter {
     private int dailyBasedCostThreshold = 0;
     private int dailyRetryAfter = 0;
     private int secondlyRetryAfter = 0;
+    private HttpHeaders headers;
 
     RateLimiter(Response response) {
+        this.headers = response.headers();
         // Todo: remove this line after mock response headers on test level.
-        if (response.headers() == null) {
+        if (headers == null) {
             return;
         }
-        if (!response.headers().allValues(DAILY_CALL_LIMIT).isEmpty()) {
-            String dailyCallLimit = response.headers().allValues(DAILY_CALL_LIMIT).get(0);
-            if (dailyCallLimit != null && !dailyCallLimit.isEmpty()) {
-                String[] parts = dailyCallLimit.split("/");
-                this.usedDailyBasedCost = Integer.parseInt(parts[0]);
-                this.dailyBasedCostThreshold = Integer.parseInt(parts[1]);
-            }
+
+        String dailyCallLimit = getHeaderValue(DAILY_CALL_LIMIT);
+        if (!dailyCallLimit.isEmpty()) {
+            String[] parts = dailyCallLimit.split("/");
+            this.usedDailyBasedCost = Integer.parseInt(parts[0]);
+            this.dailyBasedCostThreshold = Integer.parseInt(parts[1]);
         }
 
-        if (!response.headers().allValues(SECONDLY_CALL_LIMIT).isEmpty()) {
-            String secondlyCallLimit = response.headers().allValues(SECONDLY_CALL_LIMIT).get(0);
-            if (secondlyCallLimit != null && !secondlyCallLimit.isEmpty()) {
-                String[] parts = secondlyCallLimit.split("/");
-                this.usedSecondBasedCost = Integer.parseInt(parts[0]);
-                this.secondBasedCostThreshold = Integer.parseInt(parts[1]);
-            }
+        String secondlyCallLimit = getHeaderValue(SECONDLY_CALL_LIMIT);
+        if (!secondlyCallLimit.isEmpty()) {
+            String[] parts = secondlyCallLimit.split("/");
+            this.usedSecondBasedCost = Integer.parseInt(parts[0]);
+            this.secondBasedCostThreshold = Integer.parseInt(parts[1]);
         }
 
-        if (!response.headers().allValues(DAILY_RETRY_AFTER).isEmpty()) {
-            String dailyRetryAfter = response.headers().allValues(DAILY_RETRY_AFTER).get(0);
+        String dailyRetryAfter = getHeaderValue(DAILY_RETRY_AFTER);
+        if (!dailyRetryAfter.isEmpty()) {
             this.dailyRetryAfter = Integer.parseInt(dailyRetryAfter);
         }
 
-        if (!response.headers().allValues(SECONDLY_RETRY_AFTER).isEmpty()) {
-            String secondlyRetryAfter = response.headers().allValues(SECONDLY_RETRY_AFTER).get(0);
+        String secondlyRetryAfter = getHeaderValue(SECONDLY_RETRY_AFTER);
+        if (!secondlyRetryAfter.isEmpty()) {
             this.secondlyRetryAfter = Integer.parseInt(secondlyRetryAfter);
         }
     }
@@ -69,5 +70,14 @@ public class RateLimiter {
 
     int getSecondlyRetryAfter() {
         return this.secondlyRetryAfter;
+    }
+
+    private String getHeaderValue(String header) {
+        String headerValue = "";
+
+        if (!headers.allValues(header).isEmpty()) {
+            headerValue = headers.allValues(header).get(0);
+        }
+        return headerValue;
     }
 }
