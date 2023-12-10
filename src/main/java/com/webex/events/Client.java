@@ -125,7 +125,7 @@ public class Client {
         }
     }
 
-    private static void manageErrorState(Response response) throws JsonProcessingException, Exception {
+    private static void manageErrorState(Response response) throws Exception {
         ErrorResponse errorResponse = response.getErrorResponse();
         switch (response.status()) {
             case 400:
