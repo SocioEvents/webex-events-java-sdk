@@ -6,9 +6,15 @@ import java.util.Objects;
 
 public class ErrorResponse {
     public String message;
+    public JsonNode errors;
+
     public JsonNode extensions;
 
     public String getCode() {
+        if (extensions == null) {
+            return "";
+        }
+
         return extensions.get("code").textValue();
     }
 

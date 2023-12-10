@@ -75,8 +75,9 @@ public class RateLimiter {
     private String getHeaderValue(String header) {
         String headerValue = "";
 
-        if (!headers.allValues(header).isEmpty()) {
+        try {
             headerValue = headers.allValues(header).get(0);
+        }catch (ArrayIndexOutOfBoundsException ignored) {
         }
         return headerValue;
     }
