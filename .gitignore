@@ -31,3 +31,4 @@ bin/
 target
 webex-events.iml
 webex-events-java.iml
+/src/main/java/com/webex/events/Main.java

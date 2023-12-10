@@ -49,7 +49,8 @@ class ClientTest {
 
         final Configuration config = new Configuration()
                 .setMaxRetries((byte) 3)
-                .setAccessToken("sk_test_token_0190101010");
+                .setAccessToken("sk_test_token_0190101010")
+                .setTimeout((byte) 10);
         variables.put("isoCode", "USD");
         return Client.query(graphqlQuery, operationName, variables, headers, config);
     }

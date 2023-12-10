@@ -11,16 +11,27 @@ public class Response {
     private int timeSpendInMs = 0;
     private ErrorResponse errorResponse = null;
 
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+
+    public RateLimiter setRateLimiter(RateLimiter rateLimiter) {
+        return this.rateLimiter = rateLimiter;
+    }
+
+    private RateLimiter rateLimiter;
+
+    public Response(HttpResponse response) {
+        this.response = response;
+    }
+
+
     public ErrorResponse getErrorResponse() {
         return errorResponse;
     }
 
     public void setErrorResponse(ErrorResponse errorResponse) {
         this.errorResponse = errorResponse;
-    }
-
-    public Response(HttpResponse response) {
-        this.response = response;
     }
 
     public HttpResponse getResponse() {
@@ -58,16 +69,23 @@ public class Response {
         return this.retryCount;
     }
 
-    public int setRetryCount(int retryCount) {
-        return this.retryCount = retryCount;
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
     }
 
     public int getTimeSpendInMs() {
         return this.timeSpendInMs;
     }
 
-    public int setTimeSpentInMs(int timeSpendInMs) {
-        return this.timeSpendInMs = timeSpendInMs;
+    public void setTimeSpentInMs(int timeSpendInMs) {
+        this.timeSpendInMs = timeSpendInMs;
     }
 
+    public String toString() {
+        return response.body().toString();
+    }
+
+    public String getUri() {
+        return response.request().uri().toString();
+    }
 }

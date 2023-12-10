@@ -22,6 +22,17 @@ public class Client {
 
     public static final int[] RETRIABLE_HTTP_STATUSES = {408, 409, 429, 502, 503, 504};
 
+    public static String doIntrospectQuery(Configuration configuration) throws Exception {
+        Response response = query(
+                Helpers.getIntrospectionQuery(),
+                "IntrospectionQuery",
+                new HashMap<>(),
+                new HashMap<>(),
+                configuration
+        );
+        return response.toString();
+    }
+
     public static Response query(
             String query,
             String operationName,
@@ -66,6 +77,8 @@ public class Client {
         long endTime = System.currentTimeMillis();
 
         response.setTimeSpentInMs((int) (endTime - startTime));
+        response.setRequestBody(json);
+        response.setRateLimiter(new RateLimiter(response));
 
         if (response.status() > 299) {
             manageErrorState(response);
@@ -81,9 +94,11 @@ public class Client {
                 .failAfterMaxAttempts(false)
                 .retryOnResult(response -> {
                     ObjectMapper mapper = new ObjectMapper();
-                    ErrorResponse errorResponse;
+                    ErrorResponse errorResponse = null;
                     try {
-                        errorResponse = mapper.readValue(((Response)response).body(), ErrorResponse.class);
+                        if (((Response)response).status() >= 400) {
+                            errorResponse = mapper.readValue(((Response)response).body(), ErrorResponse.class);
+                        }
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
