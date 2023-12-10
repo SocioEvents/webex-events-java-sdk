@@ -10,6 +10,7 @@ public class Response {
     private int retryCount = 0;
     private int timeSpendInMs = 0;
     private ErrorResponse errorResponse = null;
+    private RateLimiter rateLimiter;
 
     public RateLimiter getRateLimiter() {
         return rateLimiter;
@@ -18,8 +19,6 @@ public class Response {
     public RateLimiter setRateLimiter(RateLimiter rateLimiter) {
         return this.rateLimiter = rateLimiter;
     }
-
-    private RateLimiter rateLimiter;
 
     public Response(HttpResponse response) {
         this.response = response;
