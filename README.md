@@ -1,5 +1,5 @@
 ⚠️ This library has not been released yet.
-# Webex Events Api
+# Webex Events Api Java SDK
 
 Webex Events provides a range of additional SDKs to accelerate your development process.
 They allow a standardized way for developers to interact with and leverage the features and functionalities.
