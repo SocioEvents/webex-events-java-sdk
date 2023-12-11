@@ -7,8 +7,11 @@ import java.util.Objects;
 public class ErrorResponse {
     public String message;
     public JsonNode errors;
-
     public JsonNode extensions;
+
+    public String getMessage() {
+        return this.message;
+    }
 
     public String getCode() {
         if (extensions == null) {
