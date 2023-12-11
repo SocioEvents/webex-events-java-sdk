@@ -55,6 +55,18 @@ class ClientTest {
         return Client.query(graphqlQuery, operationName, variables, headers, config);
     }
 
+    @Test
+    @DisplayName("It does introspection query")
+    void doesIntrospectionQuery() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        when(httpResponse.body()).thenReturn("introspection");
+
+        final Configuration config = new Configuration()
+                .setAccessToken("sk_test_token_0190101010");
+        String response = Client.doIntrospectQuery(config);
+        assertTrue("introspection" == response);
+    }
 
     @Test
     @DisplayName("Should raise AccessTokenIsRequired exception without given access token")

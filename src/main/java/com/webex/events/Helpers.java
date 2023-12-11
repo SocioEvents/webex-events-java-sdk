@@ -6,26 +6,35 @@ import com.webex.events.exceptions.InvalidUUIDFormatError;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public class Helpers {
 
+    public static final String UUID_REGEX_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+    public static final String UUID_ERROR_MESSAGE = "Idempotency-Key must be UUID format";
+    public static final String ACCESS_TOKEN_IS_MISSING = "Access token is missing.";
     private static String userAgent = null;
+    private static String introspectionQuery = null;
+    private static HashMap<String, URI> uris = new HashMap<>();
 
     static void validateIdempotencyKey(Object key) throws InvalidUUIDFormatError {
-        if (key != null) {
-            Pattern regex = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
-
-            if (!regex.matcher(key.toString()).matches()) {
-                throw new InvalidUUIDFormatError("Idempotency-Key must be UUID format");
-            }
-
+        if (key == null || key.toString().isEmpty()) {
+            return;
         }
+
+        Pattern regex = Pattern.compile(UUID_REGEX_PATTERN);
+
+        if (regex.matcher(key.toString()).matches()) {
+            return;
+        }
+
+        throw new InvalidUUIDFormatError(UUID_ERROR_MESSAGE);
     }
 
     static void validateAccessTokenExistence(String accessToken) throws AccessTokenIsRequiredError {
         if (accessToken == null || accessToken.isEmpty()) {
-            throw new AccessTokenIsRequiredError("Access token is missing.");
+            throw new AccessTokenIsRequiredError(ACCESS_TOKEN_IS_MISSING);
         }
     }
 
@@ -49,19 +58,29 @@ public class Helpers {
     }
 
     public static URI getUri(String accessToken) {
+        if (uris.containsKey(accessToken)) {
+            return uris.get(accessToken);
+        }
+
         String path = "/graphql";
-        String url ;
+        String url;
         if (accessToken.startsWith("sk_live")) {
             url = "https://public.api.socio.events" + path;
         } else {
             url = "https://public.sandbox-api.socio.events" + path;
         }
 
-        return URI.create(url);
+        URI uri = URI.create(url);
+        uris.put(accessToken, uri);
+
+        return uri;
     }
 
     public static String getIntrospectionQuery() {
-        return """
+        if (introspectionQuery != null) {
+            return introspectionQuery;
+        }
+        return introspectionQuery = """
                 query IntrospectionQuery {
                   __schema {
                    \s

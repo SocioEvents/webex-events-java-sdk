@@ -3,16 +3,15 @@ package com.webex.events;
 public class Configuration {
     private String accessToken;
     private byte timeout = 30;
-
     private byte maxRetries = 5;
-
-    public String getAccessToken() {
-        return accessToken;
-    }
 
     public Configuration setAccessToken(String accessToken) {
         this.accessToken = accessToken;
         return this;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
     }
 
     public int getTimeout() {
