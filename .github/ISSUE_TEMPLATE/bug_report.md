@@ -25,4 +25,4 @@ A clear and concise description of what you expected to happen.
 
 What specifically went wrong?
 
-Place full backtrace here (if a Ruby exception is involved):
+Place full backtrace here:
