@@ -10,6 +10,9 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
+    <build>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+    </build>
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
