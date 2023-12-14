@@ -3,10 +3,12 @@ package com.webex.events;
 import com.webex.events.exceptions.AccessTokenIsRequiredError;
 import com.webex.events.exceptions.InvalidUUIDFormatError;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class Helpers {
@@ -14,10 +16,23 @@ public class Helpers {
     public static final String UUID_REGEX_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
     public static final String UUID_ERROR_MESSAGE = "Idempotency-Key must be UUID format";
     public static final String ACCESS_TOKEN_IS_MISSING = "Access token is missing.";
+    private static String sdkVersion = null;
     private static String userAgent = null;
     private static String introspectionQuery = null;
     private static HashMap<String, URI> uris = new HashMap<>();
 
+    static String getSDKVersion() {
+        try {
+            if (sdkVersion == null) {
+                Properties properties = new Properties();
+                properties.load(Client.class.getResourceAsStream("/version.properties"));
+                return sdkVersion = properties.getProperty("version");
+            }
+        } catch (IOException ignored) {
+            sdkVersion = "";
+        }
+        return sdkVersion;
+    }
     static void validateIdempotencyKey(Object key) throws InvalidUUIDFormatError {
         if (key == null || key.toString().isEmpty()) {
             return;
@@ -53,7 +68,7 @@ public class Helpers {
         } catch (UnknownHostException ignored) {
         }
 
-        userAgent = String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", PomReader.sdkVersion(), os, hostName, javaVersion);
+        userAgent = String.format("Webex Java SDK(v%s) - OS(%s) - hostname(%s) - Java Version(%s)", getSDKVersion(), os, hostName, javaVersion);
         return userAgent;
     }
 

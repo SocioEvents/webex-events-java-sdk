@@ -59,7 +59,7 @@ public class Client {
         headers.put("Content-Type", "application/json");
         headers.put("Authorization", "Bearer " + config.getAccessToken());
         headers.put("X-Sdk-Name", "Java SDK");
-        headers.put("X-Sdk-Version", PomReader.sdkVersion());
+        headers.put("X-Sdk-Version", Helpers.getSDKVersion());
         headers.put("X-Sdk-Lang-Version", System.getProperty("java.version"));
         headers.put("User-Agent", Helpers.getUserAgent());
 
