@@ -4,7 +4,7 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
 
 public class Response {
-    private HttpResponse response;
+    private HttpResponse<?> response;
     private String requestBody;
 
     private int retryCount = 0;
@@ -20,7 +20,7 @@ public class Response {
         return this.rateLimiter = rateLimiter;
     }
 
-    public Response(HttpResponse response) {
+    public Response(HttpResponse<?> response) {
         this.response = response;
     }
 
@@ -33,7 +33,7 @@ public class Response {
         this.errorResponse = errorResponse;
     }
 
-    public HttpResponse getResponse() {
+    public HttpResponse<?> getResponse() {
         return response;
     }
 
