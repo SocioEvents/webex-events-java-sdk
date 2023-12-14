@@ -61,7 +61,7 @@ class RateLimiterTest {
         when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
         rateLimiter = new RateLimiter(response);
 
-        assertEquals(rateLimiter.getDailyRetryAfter(), 3);
+        assertEquals(rateLimiter.getDailyRetryAfterInSecond(), 3);
     }
 
     @Test
@@ -71,6 +71,6 @@ class RateLimiterTest {
         when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
         rateLimiter = new RateLimiter(response);
 
-        assertEquals(rateLimiter.getSecondlyRetryAfter(), 30);
+        assertEquals(rateLimiter.getSecondlyRetryAfterInMs(), 30);
     }
 }

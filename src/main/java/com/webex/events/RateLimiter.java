@@ -12,13 +12,13 @@ public class RateLimiter {
     private int secondBasedCostThreshold = 0;
     private int usedDailyBasedCost = 0;
     private int dailyBasedCostThreshold = 0;
-    private int dailyRetryAfter = 0;
-    private int secondlyRetryAfter = 0;
+    private int dailyRetryAfterInSecond = 0;
+    private int secondlyRetryAfterInMs = 0;
     private HttpHeaders headers;
 
     RateLimiter(Response response) {
         this.headers = response.headers();
-        // Todo: remove this line after mock response headers on test level.
+        // Todo: remove this line after mocking response headers on test level.
         if (headers == null) {
             return;
         }
@@ -39,12 +39,12 @@ public class RateLimiter {
 
         String dailyRetryAfter = getHeaderValue(DAILY_RETRY_AFTER);
         if (!dailyRetryAfter.isEmpty()) {
-            this.dailyRetryAfter = Integer.parseInt(dailyRetryAfter);
+            this.dailyRetryAfterInSecond = Integer.parseInt(dailyRetryAfter);
         }
 
         String secondlyRetryAfter = getHeaderValue(SECONDLY_RETRY_AFTER);
         if (!secondlyRetryAfter.isEmpty()) {
-            this.secondlyRetryAfter = Integer.parseInt(secondlyRetryAfter);
+            this.secondlyRetryAfterInMs = Integer.parseInt(secondlyRetryAfter);
         }
     }
 
@@ -64,12 +64,12 @@ public class RateLimiter {
         return this.dailyBasedCostThreshold;
     }
 
-    int getDailyRetryAfter() {
-        return this.dailyRetryAfter;
+    int getDailyRetryAfterInSecond() {
+        return this.dailyRetryAfterInSecond;
     }
 
-    int getSecondlyRetryAfter() {
-        return this.secondlyRetryAfter;
+    int getSecondlyRetryAfterInMs() {
+        return this.secondlyRetryAfterInMs;
     }
 
     private String getHeaderValue(String header) {
