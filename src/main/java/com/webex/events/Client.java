@@ -3,11 +3,6 @@ package com.webex.events;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.exceptions.*;
-import io.github.resilience4j.core.IntervalFunction;
-import io.github.resilience4j.core.functions.CheckedSupplier;
-import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryRegistry;
-import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +13,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public class Client {
@@ -101,66 +95,70 @@ public class Client {
     }
 
     private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request, String operationName) {
-        logger.info("Executing {} query for the first time to {}",operationName,Helpers.getUri(config.getAccessToken()));
-        IntervalFunction intervalFn = IntervalFunction.ofExponentialBackoff(250, 1.4);
-        RetryConfig retryConfig = RetryConfig.custom()
-                .maxAttempts(config.getMaxRetries())
-                .intervalFunction(intervalFn)
-                .failAfterMaxAttempts(false)
-                .retryOnResult(response -> {
-                    logger.error("{} http status received for {} query.", ((Response)response).status(), operationName);
-                    ObjectMapper mapper = new ObjectMapper();
-                    ErrorResponse errorResponse = null;
-                    try {
-                        if (((Response)response).status() >= 400) {
-                            errorResponse = mapper.readValue(((Response)response).body(), ErrorResponse.class);
-                        }
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    ((Response)response).setErrorResponse(errorResponse);
-                    if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
-                        return false;
-                    }else {
-                        return IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == ((Response) response).status());
-                    }
-                })
-                .build();
+        logger.info("Executing {} query for the first time to {}", operationName, Helpers.getUri(config.getAccessToken()));
 
-        // Create a RetryRegistry with a custom global configuration
-        RetryRegistry registry = RetryRegistry.of(retryConfig);
-
-        // Get or create a Retry from the registry -
-        // Retry will be backed by the default config
-        Retry retryWithDefaultConfig = registry.retry("custom");
-
-        AtomicInteger retryCount = new AtomicInteger();
-        retryWithDefaultConfig.getEventPublisher().onRetry(retryEvent -> {
-            retryCount.incrementAndGet();
-            logger.info(
-                    "The HTTP request is being restarted for {} query. Waiting for {} ms...",
-                    operationName,
-                    retryEvent.getWaitInterval().toMillis()
-            );
-        });
-        CheckedSupplier<Response> retryableSupplier = Retry
-                .decorateCheckedSupplier(retryWithDefaultConfig, () -> {
-                    try {
-                        return new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-
+        Response response;
         try {
-            Response response = retryableSupplier.get();
-            response.setRetryCount(retryCount.intValue());
-            return response;
-        } catch (Throwable e) {
+            response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+            buildErrorResponse(response);
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        logger.error("{} http status received for {} query.", response.status(), operationName);
+
+        Response finalResponse = response;
+        int i = 0;
+        double waitInterval = 250.0;
+        double waitRate = 1.4;
+        if (IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == finalResponse.status())) {
+            while ((i < config.getMaxRetries())) {
+                i++;
+                try {
+                    response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+                    buildErrorResponse(response);
+                    ErrorResponse errorResponse = response.getErrorResponse();
+                    if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
+                        break;
+                    }
+
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                if (response.status() < 300) {
+                    break;
+                } else {
+                    waitInterval *= waitRate;
+                    logger.info(
+                            "The HTTP request is being restarted for {} query. Waiting for {} ms...",
+                            operationName,
+                            (int) waitInterval
+                    );
+
+                    try {
+                        Thread.sleep((int) waitInterval);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+        response.setRetryCount(i);
+        return response;
+    }
+
+    private static void buildErrorResponse(Response response) {
+        try {
+            if (response.status() > 299) {
+                ObjectMapper mapper = new ObjectMapper();
+                ErrorResponse errResponse;
+                errResponse = mapper.readValue(response.body(), ErrorResponse.class);
+                response.setErrorResponse(errResponse);
+            }
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
-
     private static void manageErrorState(Response response) throws Exception {
         ErrorResponse errorResponse = response.getErrorResponse();
         switch (response.status()) {
