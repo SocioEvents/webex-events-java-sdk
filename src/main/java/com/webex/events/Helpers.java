@@ -3,11 +3,12 @@ package com.webex.events;
 import com.webex.events.exceptions.AccessTokenIsRequiredError;
 import com.webex.events.exceptions.InvalidUUIDFormatError;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -25,7 +26,7 @@ public class Helpers {
         try {
             if (sdkVersion == null) {
                 Properties properties = new Properties();
-                properties.load(Client.class.getResourceAsStream("/version.properties"));
+                properties.load(Helpers.class.getResourceAsStream("/version.properties"));
                 return sdkVersion = properties.getProperty("version");
             }
         } catch (IOException ignored) {
@@ -95,101 +96,22 @@ public class Helpers {
         if (introspectionQuery != null) {
             return introspectionQuery;
         }
-        return introspectionQuery = """
-                query IntrospectionQuery {
-                  __schema {
-                   \s
-                    queryType { name }
-                    mutationType { name }
-                    subscriptionType { name }
-                    types {
-                      ...FullType
-                    }
-                    directives {
-                      name
-                      description
-                      locations
-                     \s
-                      args {
-                        ...InputValue
-                      }
-                    }
-                  }
-                }
-                fragment FullType on __Type {
-                  kind
-                  name
-                  description
-                 \s
-                 \s
-                  fields(includeDeprecated: true) {
-                    name
-                    description
-                    args {
-                      ...InputValue
-                    }
-                    type {
-                      ...TypeRef
-                    }
-                    isDeprecated
-                    deprecationReason
-                  }
-                  inputFields {
-                    ...InputValue
-                  }
-                  interfaces {
-                    ...TypeRef
-                  }
-                  enumValues(includeDeprecated: true) {
-                    name
-                    description
-                    isDeprecated
-                    deprecationReason
-                  }
-                  possibleTypes {
-                    ...TypeRef
-                  }
-                }
-                fragment InputValue on __InputValue {
-                  name
-                  description
-                  type { ...TypeRef }
-                  defaultValue
-                 \s
-                 \s
-                }
-                fragment TypeRef on __Type {
-                  kind
-                  name
-                  ofType {
-                    kind
-                    name
-                    ofType {
-                      kind
-                      name
-                      ofType {
-                        kind
-                        name
-                        ofType {
-                          kind
-                          name
-                          ofType {
-                            kind
-                            name
-                            ofType {
-                              kind
-                              name
-                              ofType {
-                                kind
-                                name
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                """;
+
+        try {
+            ClassLoader classLoader = Helpers.class.getClassLoader();
+            File file = new File(Objects.requireNonNull(classLoader.getResource("introspection.query")).getFile());
+            InputStream inputStream = new FileInputStream(file);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+
+            introspectionQuery = sb.toString();
+        } catch (IOException ignored) {
+        }
+        return introspectionQuery;
     }
 }
