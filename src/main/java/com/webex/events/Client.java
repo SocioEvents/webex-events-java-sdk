@@ -3,10 +3,13 @@ package com.webex.events;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.exceptions.*;
+import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.core.functions.CheckedSupplier;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
 import io.github.resilience4j.retry.RetryConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -19,10 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public class Client {
-
+    final static Logger logger = LoggerFactory.getLogger(Client.class);
     public static final int[] RETRIABLE_HTTP_STATUSES = {408, 409, 429, 502, 503, 504};
 
     public static String doIntrospectQuery(Configuration configuration) throws Exception {
+        logger.debug("Doing introspection query...");
         Response response = query(
                 Helpers.getIntrospectionQuery(),
                 "IntrospectionQuery",
@@ -73,26 +77,38 @@ public class Client {
 
         long startTime = System.currentTimeMillis();
         HttpClient httpClient = HttpClient.newHttpClient();
-        Response response = doOrRetryTheRequest(config, httpClient, request);
+        Response response = doOrRetryTheRequest(config, httpClient, request, operationName);
         long endTime = System.currentTimeMillis();
 
         response.setTimeSpentInMs((int) (endTime - startTime));
         response.setRequestBody(json);
         response.setRateLimiter(new RateLimiter(response));
 
+        logger.info(
+                "Executing {} query is finished with {} status code. It took {} ms and retried {} times.",
+                operationName,
+                response.status(),
+                response.getTimeSpendInMs(),
+                response.getRetryCount()
+        );
+
         if (response.status() > 299) {
+            logger.error("Executing {} query is failed. Received status code is {}", operationName, response.status());
             manageErrorState(response);
         }
 
         return response;
     }
 
-    private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request) {
+    private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request, String operationName) {
+        logger.info("Executing {} query for the first time to {}",operationName,Helpers.getUri(config.getAccessToken()));
+        IntervalFunction intervalFn = IntervalFunction.ofExponentialBackoff(250, 1.4);
         RetryConfig retryConfig = RetryConfig.custom()
                 .maxAttempts(config.getMaxRetries())
-                .waitDuration(Duration.ofMillis(500))
+                .intervalFunction(intervalFn)
                 .failAfterMaxAttempts(false)
                 .retryOnResult(response -> {
+                    logger.error("{} http status received for {} query.", ((Response)response).status(), operationName);
                     ObjectMapper mapper = new ObjectMapper();
                     ErrorResponse errorResponse = null;
                     try {
@@ -121,6 +137,11 @@ public class Client {
         AtomicInteger retryCount = new AtomicInteger();
         retryWithDefaultConfig.getEventPublisher().onRetry(retryEvent -> {
             retryCount.incrementAndGet();
+            logger.info(
+                    "The HTTP request is being restarted for {} query. Waiting for {} ms...",
+                    operationName,
+                    retryEvent.getWaitInterval().toMillis()
+            );
         });
         CheckedSupplier<Response> retryableSupplier = Retry
                 .decorateCheckedSupplier(retryWithDefaultConfig, () -> {
