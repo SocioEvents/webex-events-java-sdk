@@ -24,6 +24,16 @@ For maven:
 $ mvn clean install
 ```
 
+For Gradle:
+```
+dependencies {
+    compile "com.webex.events:webex-events:<version>"
+}
+```
+```
+$ gradle build --refresh-dependencies
+```
+
 Configuration
 -----------------
 ```java
