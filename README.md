@@ -8,21 +8,65 @@ Pre-built code modules will help access the APIs with your private keys, simplif
 Requirements
 -----------------
 
-TODO:
+Java 17+
 
 Installation
 -----------------
-
-TODO:
+For maven:
+```xml
+<dependency>
+    <groupId>com.webex.events</groupId>
+    <artifactId>webex-events</artifactId>
+    <version>desired version</version>
+</dependency>
+```
+```shell
+$ mvn clean install
+```
 
 Configuration
 -----------------
-
-TODO:
+```java
+Configuration configuration = new Configuration();
+configuration
+        .setAccessToken("sk_live_your_access_token")
+        .setTimeout((byte) 30)
+        .setMaxRetries((byte) 5);
+```
 
 Usage
 -----------------
-TODO:
+```java
+String query = "query CurrenciesList{ currenciesList{ isoCode }}";
+String operationName = "CurrenciesList";
+HashMap<String, Object> variables = new HashMap<>();
+HashMap<String, Object> headers = new HashMap<>();
+
+try {
+    Response response = Client.query(query, operationName, variables, headers, configuration);
+}catch (DailyQuotaIsReachedError e) {
+    // Handle what will happen if daily quota is reached here.
+}catch (SecondBasedQuotaIsReachedError e) {
+    int retryAfter = e.response().getRateLimiter().getSecondlyRetryAfterInMs()
+    if (retryAfter > 0) {
+        Thread.sleep(retryAfter);
+        // Retry the request.
+    }
+}catch (ConflictError e) {
+    Thread.sleep(250);
+    // Retry the request
+}
+```
+
+By default some HTTP statuses are retriable such as `408, 409, 429, 502, 503, 504`. This library tries this status
+codes 5 times by default. If this is not sufficient, increase max retry count through Configuration class or re-catch 
+the exceptions to implement your logic here. 
+
+For Introspection Query
+-----------------
+```java
+String json = Client.doIntrospectQuery(configuration);
+```
 
 Idempotency
 -----------------
@@ -35,7 +79,21 @@ To perform mutation request, you must add a header which contains the idempotenc
 The SDK also validates the key on runtime, if it is not valid UUID token it will raise an exception. Here is an example
 like the following:
 
-TODO: 
+```java
+String query = "mutation TrackDelete($input: TrackDeleteInput!) {trackDelete(input: $input) {success}}";
+String operationName = "TrackDelete";
+HashMap<String, Object> variables = new HashMap<>();
+HashMap<String, Object> headers = new HashMap<>();
+
+HashMap<String, Object> input = new HashMap<>();
+input.put("ids", new int[]{1,2,3});
+input.put("eventId", 1);
+variables.put("input", input);
+
+headers.put("Idempotency-Key", UUID.randomUUID().toString());
+
+Response response = Client.query(query, operationName, variables, headers, configuration);
+```
 
 Telemetry Data Collection
 -----------------

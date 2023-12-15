@@ -1,6 +1,5 @@
 query IntrospectionQuery {
   __schema {
-   s
     queryType { name }
     mutationType { name }
     subscriptionType { name }
@@ -11,7 +10,6 @@ query IntrospectionQuery {
       name
       description
       locations
-     s
       args {
         ...InputValue
       }
@@ -22,8 +20,6 @@ fragment FullType on __Type {
   kind
   name
   description
- s
- s
   fields(includeDeprecated: true) {
     name
     description
@@ -57,8 +53,6 @@ fragment InputValue on __InputValue {
   description
   type { ...TypeRef }
   defaultValue
- s
- s
 }
 fragment TypeRef on __Type {
   kind
