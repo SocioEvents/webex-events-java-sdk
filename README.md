@@ -104,7 +104,7 @@ the utmost respect for your privacy. For more details, please refer to the Priva
 Development
 -----------------
 
-TODO:
+After checking out the repo, install dependencies. Then run tests.
 
 Contributing
 -----------------
