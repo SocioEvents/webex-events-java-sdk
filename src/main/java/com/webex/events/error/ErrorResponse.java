@@ -1,4 +1,4 @@
-package com.webex.events;
+package com.webex.events.error;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -7,7 +7,7 @@ import java.util.Objects;
 public class ErrorResponse {
     public String message;
     public JsonNode errors;
-    public JsonNode extensions;
+    public Extensions extensions;
 
     public String getMessage() {
         return this.message;
@@ -18,7 +18,7 @@ public class ErrorResponse {
             return "";
         }
 
-        return extensions.get("code").textValue();
+        return extensions.getCode();
     }
 
     public boolean isInvalidToken() {
@@ -34,8 +34,8 @@ public class ErrorResponse {
             return false;
         }
 
-        JsonNode availableCost = extensions.get("dailyAvailableCost");
-        return availableCost != null && availableCost.intValue() < 1;
+        int availableCost = extensions.getDailyAvailableCost();
+        return availableCost < 1;
     }
 
     public boolean availableCostIsReached() {
@@ -43,7 +43,7 @@ public class ErrorResponse {
             return false;
         }
 
-        JsonNode availableCost = extensions.get("availableCost");
-        return availableCost != null && availableCost.intValue() < 1;
+        int availableCost = extensions.getAvailableCost();
+        return availableCost < 1;
     }
 }

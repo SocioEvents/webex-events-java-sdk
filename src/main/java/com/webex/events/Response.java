@@ -1,5 +1,7 @@
 package com.webex.events;
 
+import com.webex.events.error.ErrorResponse;
+
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
 

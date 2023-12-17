@@ -304,6 +304,7 @@ class ClientTest {
         HashMap<String, Object> jsonObject = new HashMap<>();
         HashMap<String, Object> code = new HashMap<>();
         code.put("availableCost", 0);
+        code.put("dailyAvailableCost", 1);
         jsonObject.put("extensions", code);
 
         ObjectMapper objectMapper = new ObjectMapper();
