@@ -4,6 +4,7 @@ import com.webex.events.Response;
 
 public class UnknownStatusError extends BaseException{
     public UnknownStatusError(Response response) {
+        super(response.body());
         this.response = response;
     }
 }
