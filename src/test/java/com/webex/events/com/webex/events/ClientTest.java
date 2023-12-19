@@ -33,6 +33,8 @@ class ClientTest {
         this.httpClient = mock(HttpClient.class);
         httpClientStatic.when( ()-> HttpClient.newHttpClient() ).thenReturn(httpClient);
         this.httpResponse = mock(HttpResponse.class);
+        Configuration.setAccessToken("sk_test_token_0190101010");
+        Configuration.setMaxRetries(3);
     }
 
     @AfterEach
@@ -46,13 +48,8 @@ class ClientTest {
         final HashMap<String, Object> variables = new HashMap<>();
         final HashMap<String, Object> headers = new HashMap<>();
         headers.put("Idempotency-Key", UUID.randomUUID().toString());
-
-        final Configuration config = new Configuration()
-                .setMaxRetries((byte) 3)
-                .setAccessToken("sk_test_token_0190101010")
-                .setTimeout((byte) 10);
         variables.put("isoCode", "USD");
-        return Client.query(graphqlQuery, operationName, variables, headers, config);
+        return Client.query(graphqlQuery, operationName, variables, headers);
     }
 
     @Test
@@ -62,9 +59,7 @@ class ClientTest {
         when(httpClient.send(any(),any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn("introspection");
 
-        final Configuration config = new Configuration()
-                .setAccessToken("sk_test_token_0190101010");
-        String response = Client.doIntrospectQuery(config);
+        String response = Client.doIntrospectQuery();
         assertTrue("introspection" == response);
     }
 
@@ -77,9 +72,9 @@ class ClientTest {
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
         final HashMap<String, Object> headers = new HashMap<>();
-        final Configuration config = new Configuration();
+        Configuration.setAccessToken("");
         Exception exception = assertThrows(AccessTokenIsRequiredError.class, () -> {
-            Client.query(graphqlQuery, operationName, variables, headers, config);
+            Client.query(graphqlQuery, operationName, variables, headers);
         });
 
         assertTrue(Objects.equals(exception.getMessage(), "Access token is missing."));
@@ -94,10 +89,7 @@ class ClientTest {
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
         final HashMap<String, Object> headers = new HashMap<>();
-        final Configuration config = new Configuration()
-                .setMaxRetries((byte) 3)
-                .setAccessToken("sk_test_token_0190101010");
-        Response response = Client.query(graphqlQuery, operationName, variables, headers, config);
+        Response response = Client.query(graphqlQuery, operationName, variables, headers);
         assertTrue(response.status() == 200);
     }
 
@@ -113,13 +105,10 @@ class ClientTest {
         final HashMap<String, Object> headers = new HashMap<>();
         headers.put("Idempotency-Key", UUID.randomUUID() + "invalid");
 
-        final Configuration config = new Configuration()
-                .setMaxRetries((byte) 3)
-                .setAccessToken("sk_test_token_0190101010");
         variables.put("isoCode", "USD");
 
         Exception exception = assertThrows(InvalidUUIDFormatError.class, () -> {
-            Client.query(graphqlQuery, operationName, variables, headers, config);
+            Client.query(graphqlQuery, operationName, variables, headers);
         });
 
         assertTrue(Objects.equals(exception.getMessage(), "Idempotency-Key must be UUID format"));

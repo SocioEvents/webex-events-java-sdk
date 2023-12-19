@@ -1,36 +1,34 @@
 package com.webex.events;
 
+import java.time.Duration;
+
 public class Configuration {
-    private String accessToken;
-    private byte timeout = 30;
-    private byte maxRetries = 5;
+    private static String accessToken;
 
-    public Configuration setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-        return this;
+    private static Duration timeout = Duration.ofSeconds(30);
+    private static int maxRetries = 5;
+
+
+    public static void setAccessToken(String apiKey) {
+        accessToken = apiKey;
     }
-
-    public String getAccessToken() {
+    public static String getAccessToken(){
         return accessToken;
     }
 
-    public int getTimeout() {
+    public static Duration getTimeout() {
         return timeout;
     }
 
-    public Configuration setTimeout(byte timeout) {
-        assert timeout >= (byte) 1;
-        this.timeout = timeout;
-        return this;
+    public static void setTimeout(Duration timeout) {
+        Configuration.timeout = timeout;
     }
 
-    public int getMaxRetries() {
+    public static int getMaxRetries() {
         return maxRetries;
     }
 
-    public Configuration setMaxRetries(byte maxRetries) {
-        assert maxRetries >= (byte) 1;
-        this.maxRetries = maxRetries;
-        return this;
+    public static void setMaxRetries(int maxRetries) {
+        Configuration.maxRetries = maxRetries;
     }
 }

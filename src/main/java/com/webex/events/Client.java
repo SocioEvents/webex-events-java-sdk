@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -20,14 +19,13 @@ public class Client {
     final static Logger logger = LoggerFactory.getLogger(Client.class);
     public static final int[] RETRIABLE_HTTP_STATUSES = {408, 409, 429, 502, 503, 504};
 
-    public static String doIntrospectQuery(Configuration configuration) throws Exception {
+    public static String doIntrospectQuery() throws Exception {
         logger.debug("Doing introspection query...");
         Response response = query(
                 Helpers.getIntrospectionQuery(),
                 "IntrospectionQuery",
                 new HashMap<>(),
-                new HashMap<>(),
-                configuration
+                new HashMap<>()
         );
         return response.toString();
     }
@@ -36,12 +34,11 @@ public class Client {
             String query,
             String operationName,
             HashMap<String, Object> variables,
-            HashMap<String, Object> headers,
-            Configuration config
+            HashMap<String, Object> headers
     ) throws Exception {
 
         Helpers.validateIdempotencyKey(headers.get("Idempotency-Key"));
-        Helpers.validateAccessTokenExistence(config.getAccessToken());
+        Helpers.validateAccessTokenExistence();
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("query", query);
@@ -52,27 +49,27 @@ public class Client {
         String json = objectMapper.writeValueAsString(params);
 
         headers.put("Content-Type", "application/json");
-        headers.put("Authorization", "Bearer " + config.getAccessToken());
+        headers.put("Authorization", "Bearer " + Configuration.getAccessToken());
         headers.put("X-Sdk-Name", "Java SDK");
         headers.put("X-Sdk-Version", Helpers.getSDKVersion());
         headers.put("X-Sdk-Lang-Version", System.getProperty("java.version"));
         headers.put("User-Agent", Helpers.getUserAgent());
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(Helpers.getUri(config.getAccessToken()));
+                .uri(Helpers.getUri(Configuration.getAccessToken()));
 
         for (Map.Entry<String, Object> header : headers.entrySet()) {
             requestBuilder.header(header.getKey(), (String) header.getValue());
         }
 
         HttpRequest request = requestBuilder
-                .timeout(Duration.ofSeconds(config.getTimeout()))
+                .timeout(Configuration.getTimeout())
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
         long startTime = System.currentTimeMillis();
         HttpClient httpClient = HttpClient.newHttpClient();
-        Response response = doOrRetryTheRequest(config, httpClient, request, operationName);
+        Response response = doOrRetryTheRequest(httpClient, request, operationName);
         long endTime = System.currentTimeMillis();
 
         response.setTimeSpentInMs((int) (endTime - startTime));
@@ -95,8 +92,8 @@ public class Client {
         return response;
     }
 
-    private static Response doOrRetryTheRequest(Configuration config, HttpClient httpClient, HttpRequest request, String operationName) {
-        logger.info("Executing {} query for the first time to {}", operationName, Helpers.getUri(config.getAccessToken()));
+    private static Response doOrRetryTheRequest(HttpClient httpClient, HttpRequest request, String operationName) {
+        logger.info("Executing {} query for the first time to {}", operationName, Helpers.getUri(Configuration.getAccessToken()));
 
         Response response;
         try {
@@ -113,7 +110,7 @@ public class Client {
         double waitInterval = 250.0;
         double waitRate = 1.4;
         if (IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == finalResponse.status())) {
-            while ((i < config.getMaxRetries())) {
+            while ((i < Configuration.getMaxRetries())) {
                 i++;
                 try {
                     response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));

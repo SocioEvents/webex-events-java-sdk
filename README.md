@@ -39,12 +39,13 @@ $ gradle build --refresh-dependencies
 
 Configuration
 -----------------
+
 ```java
-Configuration configuration = new Configuration();
-configuration
-        .setAccessToken("sk_live_your_access_token")
-        .setTimeout((byte) 30)
-        .setMaxRetries((byte) 5);
+import com.webex.events.Configuration;
+
+Configuration.setAccessToken("sk_live_your_access_token");
+Configuration.setTimeout(Duration.ofSeconds(30)); // Optional
+Configuration.setMaxRetries(5); // Optional
 ```
 
 Usage
@@ -56,7 +57,7 @@ HashMap<String, Object> variables = new HashMap<>();
 HashMap<String, Object> headers = new HashMap<>();
 
 try {
-    Response response = Client.query(query, operationName, variables, headers, configuration);
+    Response response = Client.query(query, operationName, variables, headers);
 }catch (DailyQuotaIsReachedError e) {
     // Handle what will happen if daily quota is reached here.
 }catch (SecondBasedQuotaIsReachedError e) {
@@ -78,7 +79,7 @@ the exceptions to implement your logic here.
 For Introspection Query
 -----------------
 ```java
-String json = Client.doIntrospectQuery(configuration);
+String json = Client.doIntrospectQuery();
 ```
 
 Idempotency
@@ -105,7 +106,7 @@ variables.put("input", input);
 
 headers.put("Idempotency-Key", UUID.randomUUID().toString());
 
-Response response = Client.query(query, operationName, variables, headers, configuration);
+Response response = Client.query(query, operationName, variables, headers);
 ```
 
 Telemetry Data Collection

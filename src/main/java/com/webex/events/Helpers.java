@@ -48,8 +48,8 @@ public class Helpers {
         throw new InvalidUUIDFormatError(UUID_ERROR_MESSAGE);
     }
 
-    static void validateAccessTokenExistence(String accessToken) throws AccessTokenIsRequiredError {
-        if (accessToken == null || accessToken.isEmpty()) {
+    static void validateAccessTokenExistence() throws AccessTokenIsRequiredError {
+        if (Configuration.getAccessToken() == null || Configuration.getAccessToken().isEmpty()) {
             throw new AccessTokenIsRequiredError(ACCESS_TOKEN_IS_MISSING);
         }
     }
