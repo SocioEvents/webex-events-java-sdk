@@ -41,8 +41,6 @@ Configuration
 -----------------
 
 ```java
-import com.webex.events.Configuration;
-
 Configuration.setAccessToken("sk_live_your_access_token");
 Configuration.setTimeout(Duration.ofSeconds(30)); // Optional
 Configuration.setMaxRetries(5); // Optional
