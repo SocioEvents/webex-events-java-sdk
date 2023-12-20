@@ -112,6 +112,18 @@ public class Client {
         if (IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == finalResponse.status())) {
             while ((i < Configuration.getMaxRetries())) {
                 i++;
+                waitInterval *= waitRate;
+                logger.info(
+                        "The HTTP request is being restarted for {} query. Waiting for {} ms...",
+                        operationName,
+                        (int) waitInterval
+                );
+
+                try {
+                    Thread.sleep((int) waitInterval);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 try {
                     response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
                     buildErrorResponse(response);
@@ -125,19 +137,6 @@ public class Client {
                 }
                 if (response.status() < 300) {
                     break;
-                } else {
-                    waitInterval *= waitRate;
-                    logger.info(
-                            "The HTTP request is being restarted for {} query. Waiting for {} ms...",
-                            operationName,
-                            (int) waitInterval
-                    );
-
-                    try {
-                        Thread.sleep((int) waitInterval);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
                 }
             }
         }
