@@ -13,9 +13,6 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class Helpers {
-
-    public static final String UUID_REGEX_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
-    public static final String UUID_ERROR_MESSAGE = "Idempotency-Key must be UUID format";
     public static final String ACCESS_TOKEN_IS_MISSING = "Access token is missing.";
     private static String sdkVersion = null;
     private static String userAgent = null;
