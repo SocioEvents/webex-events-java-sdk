@@ -51,15 +51,13 @@ Usage
 ```java
 String query = "query CurrenciesList{ currenciesList{ isoCode }}";
 String operationName = "CurrenciesList";
-HashMap<String, Object> variables = new HashMap<>();
-HashMap<String, Object> headers = new HashMap<>();
 
 try {
-    Response response = Client.query(query, operationName, variables, headers);
+    Response response = Client.query(query, operationName);
 }catch (DailyQuotaIsReachedError e) {
     // Handle what will happen if daily quota is reached here.
 }catch (SecondBasedQuotaIsReachedError e) {
-    int retryAfter = e.response().getRateLimiter().getSecondlyRetryAfterInMs()
+    int retryAfter = e.response().getRateLimiter().getSecondlyRetryAfterInMs();
     if (retryAfter > 0) {
         Thread.sleep(retryAfter);
         // Retry the request.
@@ -95,16 +93,16 @@ like the following:
 String query = "mutation TrackDelete($input: TrackDeleteInput!) {trackDelete(input: $input) {success}}";
 String operationName = "TrackDelete";
 HashMap<String, Object> variables = new HashMap<>();
-HashMap<String, Object> headers = new HashMap<>();
+RequestOptions options = RequestOptions.newBuilder().setIdempotencyKey(UUID.randomUUID());
 
 HashMap<String, Object> input = new HashMap<>();
-input.put("ids", new int[]{1,2,3});
-input.put("eventId", 1);
-variables.put("input", input);
+input.put("ids",new int[] {
+    1, 2, 3
+});
+input.put("eventId",1);
+variables.put("input",input);
 
-headers.put("Idempotency-Key", UUID.randomUUID().toString());
-
-Response response = Client.query(query, operationName, variables, headers);
+Response response = Client.query(query, operationName, variables, options);
 ```
 
 Telemetry Data Collection

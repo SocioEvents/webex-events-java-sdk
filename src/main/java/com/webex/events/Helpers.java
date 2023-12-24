@@ -34,19 +34,6 @@ public class Helpers {
         }
         return sdkVersion;
     }
-    static void validateIdempotencyKey(Object key) throws InvalidUUIDFormatError {
-        if (key == null || key.toString().isEmpty()) {
-            return;
-        }
-
-        Pattern regex = Pattern.compile(UUID_REGEX_PATTERN);
-
-        if (regex.matcher(key.toString()).matches()) {
-            return;
-        }
-
-        throw new InvalidUUIDFormatError(UUID_ERROR_MESSAGE);
-    }
 
     static void validateAccessTokenExistence() throws AccessTokenIsRequiredError {
         if (Configuration.getAccessToken() == null || Configuration.getAccessToken().isEmpty()) {

@@ -47,9 +47,9 @@ class ClientTest {
         final String operationName = "Currency";
         final HashMap<String, Object> variables = new HashMap<>();
         final HashMap<String, Object> headers = new HashMap<>();
-        headers.put("Idempotency-Key", UUID.randomUUID().toString());
+        final RequestOptions options = RequestOptions.NewBuilder().setIdempotencyKey(UUID.randomUUID().toString());
         variables.put("isoCode", "USD");
-        return Client.query(graphqlQuery, operationName, variables, headers);
+        return Client.query(graphqlQuery, operationName, variables, options);
     }
 
     @Test
@@ -71,10 +71,9 @@ class ClientTest {
         final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
-        final HashMap<String, Object> headers = new HashMap<>();
         Configuration.setAccessToken("");
         Exception exception = assertThrows(AccessTokenIsRequiredError.class, () -> {
-            Client.query(graphqlQuery, operationName, variables, headers);
+            Client.query(graphqlQuery, operationName, variables);
         });
 
         assertTrue(Objects.equals(exception.getMessage(), "Access token is missing."));
@@ -88,30 +87,8 @@ class ClientTest {
         final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
-        final HashMap<String, Object> headers = new HashMap<>();
-        Response response = Client.query(graphqlQuery, operationName, variables, headers);
+        Response response = Client.query(graphqlQuery, operationName, variables);
         assertTrue(response.status() == 200);
-    }
-
-    @Test
-    @DisplayName("Should raise InvalidUUIDFormatError exception if given Idempotency Key is not UUID format.")
-    void invalidUUIDTest() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
-
-        final String graphqlQuery = "query Currency($isoCode: String!){ currency(isoCode: $isoCode) { isoCode}}";
-        final String operationName = "Currency";
-        final HashMap<String, Object> variables = new HashMap<>();
-        final HashMap<String, Object> headers = new HashMap<>();
-        headers.put("Idempotency-Key", UUID.randomUUID() + "invalid");
-
-        variables.put("isoCode", "USD");
-
-        Exception exception = assertThrows(InvalidUUIDFormatError.class, () -> {
-            Client.query(graphqlQuery, operationName, variables, headers);
-        });
-
-        assertTrue(Objects.equals(exception.getMessage(), "Idempotency-Key must be UUID format"));
     }
 
     @Test
