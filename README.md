@@ -11,7 +11,7 @@ Pre-built code modules will help access the APIs with your private keys, simplif
 Requirements
 -----------------
 
-Java 17+
+Java 8+
 
 Installation
 -----------------
