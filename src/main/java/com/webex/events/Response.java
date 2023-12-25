@@ -2,17 +2,19 @@ package com.webex.events;
 
 import com.webex.events.error.ErrorResponse;
 
-import java.net.http.HttpHeaders;
-import java.net.http.HttpResponse;
+import java.util.HashMap;
 
 public class Response {
-    private HttpResponse<?> response;
     private String requestBody;
-
     private int retryCount = 0;
     private int timeSpendInMs = 0;
     private ErrorResponse errorResponse = null;
     private RateLimiter rateLimiter;
+    private int status;
+    private String body;
+    private HashMap<String, String> responseHeaders;
+    private HashMap<String, String> requestHeaders;
+    private String uri;
 
     public RateLimiter getRateLimiter() {
         return rateLimiter;
@@ -22,11 +24,6 @@ public class Response {
         return this.rateLimiter = rateLimiter;
     }
 
-    public Response(HttpResponse<?> response) {
-        this.response = response;
-    }
-
-
     public ErrorResponse getErrorResponse() {
         return errorResponse;
     }
@@ -35,27 +32,40 @@ public class Response {
         this.errorResponse = errorResponse;
     }
 
-    public HttpResponse<?> getResponse() {
-        return response;
+    public int getStatus() {
+        return this.status;
     }
 
-    public int status() {
-        return this.response.statusCode();
+    public void setStatus(int status) {
+        this.status = status;
     }
 
-    public HttpHeaders headers() {
-        return this.response.headers();
+    public HashMap<String, String> getResponseHeaders() {
+        return this.responseHeaders;
     }
 
-    public String body() {
-        if (this.response.body() == null) {
+    public void setResponseHeaders(HashMap<String, String> responseHeaders) {
+        this.responseHeaders = responseHeaders;
+    }
+
+    public HashMap<String, String> getRequestHeaders() {
+        return this.requestHeaders;
+    }
+
+    public void setRequestHeaders(HashMap<String, String> requestHeaders) {
+        this.requestHeaders = requestHeaders;
+    }
+
+
+    public String getBody() {
+        if (this.body == null) {
             return "{}";
         }
-        return this.response.body().toString();
+        return this.body;
     }
 
-    public HttpHeaders requestHeaders() {
-        return this.response.request().headers();
+    public void setBody(String body) {
+        this.body = body;
     }
 
     public String requestBody() {
@@ -83,10 +93,14 @@ public class Response {
     }
 
     public String toString() {
-        return response.body().toString();
+        return body;
     }
 
     public String getUri() {
-        return response.request().uri().toString();
+        return this.uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
     }
 }

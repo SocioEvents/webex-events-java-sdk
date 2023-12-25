@@ -1,6 +1,7 @@
 package com.webex.events;
 
 import java.net.http.HttpHeaders;
+import java.util.HashMap;
 
 public class RateLimiter {
     private static final String SECONDLY_CALL_LIMIT = "x-secondly-call-limit";
@@ -14,10 +15,10 @@ public class RateLimiter {
     private int dailyBasedCostThreshold = 0;
     private int dailyRetryAfterInSecond = 0;
     private int secondlyRetryAfterInMs = 0;
-    private HttpHeaders headers;
+    private HashMap<String, String> headers;
 
     RateLimiter(Response response) {
-        this.headers = response.headers();
+        this.headers = response.getResponseHeaders();
         // Todo: remove this line after mocking response headers on test level.
         if (headers == null) {
             return;
@@ -76,7 +77,10 @@ public class RateLimiter {
         String headerValue = "";
 
         try {
-            headerValue = headers.allValues(header).get(0);
+            headerValue = headers.get(header);
+            if (headerValue == null) {
+                headerValue = "";
+            }
         }catch (ArrayIndexOutOfBoundsException ignored) {
         }
         return headerValue;

@@ -5,7 +5,7 @@ import com.webex.events.Response;
 public class RequestTimeoutError extends BaseException {
 
     public RequestTimeoutError(Response response) {
-        super(response.body());
+        super(response.getBody());
         this.response = response;
     }
 }

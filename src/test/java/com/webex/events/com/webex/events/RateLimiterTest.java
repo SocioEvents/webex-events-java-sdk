@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RateLimiterTest {
     Response response;
-    Map<String, List<String>> headersMap = new HashMap<>();
+    Map<String, String> headersMap = new HashMap<>();
     Arrays Arrays = null;
     RateLimiter rateLimiter;
 
@@ -34,8 +34,8 @@ class RateLimiterTest {
     @Test
     @DisplayName("Should return daily limits")
     void testDailyCallLimitHeader() {
-        headersMap.put("x-daily-call-limit", Arrays.asList("2/10"));
-        when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
+        headersMap.put("x-daily-call-limit", "2/10");
+        when(response.getResponseHeaders()).thenReturn((HashMap<String, String>) headersMap);
         rateLimiter = new RateLimiter(response);
 
         assertEquals(rateLimiter.getUsedDailyBasedCost(), 2);
@@ -46,8 +46,8 @@ class RateLimiterTest {
     @Test
     @DisplayName("Should return secondly limits")
     void testSecondlyCallLimitHeader() {
-        headersMap.put("x-secondly-call-limit", Arrays.asList("35/50"));
-        when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
+        headersMap.put("x-secondly-call-limit", "35/50");
+        when(response.getResponseHeaders()).thenReturn((HashMap<String, String>) headersMap);
         rateLimiter = new RateLimiter(response);
 
         assertEquals(rateLimiter.getUsedSecondBasedCost(), 35);
@@ -57,8 +57,8 @@ class RateLimiterTest {
     @Test
     @DisplayName("Should return daily retry after")
     void testDailyRetryAfter() {
-        headersMap.put("x-daily-retry-after", Arrays.asList("3"));
-        when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
+        headersMap.put("x-daily-retry-after", "3");
+        when(response.getResponseHeaders()).thenReturn((HashMap<String, String>) headersMap);
         rateLimiter = new RateLimiter(response);
 
         assertEquals(rateLimiter.getDailyRetryAfterInSecond(), 3);
@@ -67,8 +67,8 @@ class RateLimiterTest {
     @Test
     @DisplayName("Should return daily retry after")
     void testSecondlyRetryAfter() {
-        headersMap.put("x-secondly-retry-after", Arrays.asList("30"));
-        when(response.headers()).thenReturn(HttpHeaders.of(headersMap, (k, v) -> true));
+        headersMap.put("x-secondly-retry-after", "30");
+        when(response.getResponseHeaders()).thenReturn((HashMap<String, String>) headersMap);
         rateLimiter = new RateLimiter(response);
 
         assertEquals(rateLimiter.getSecondlyRetryAfterInMs(), 30);

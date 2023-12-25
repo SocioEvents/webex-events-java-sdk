@@ -5,7 +5,7 @@ import com.webex.events.Response;
 public class AuthenticationRequiredError extends BaseException {
 
     public AuthenticationRequiredError(Response response) {
-        super(response.body());
+        super(response.getBody());
         this.response = response;
     }
 }
