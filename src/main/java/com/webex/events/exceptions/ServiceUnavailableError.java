@@ -4,7 +4,7 @@ import com.webex.events.Response;
 
 public class ServiceUnavailableError extends BaseException{
     public ServiceUnavailableError(Response response) {
-        super(response.body());
+        super(response.getBody());
         this.response = response;
     }
 }

@@ -90,13 +90,13 @@ public class Client {
         logger.info(
                 "Executing {} query is finished with {} status code. It took {} ms and retried {} times.",
                 operationName,
-                response.status(),
+                response.getStatus(),
                 response.getTimeSpendInMs(),
                 response.getRetryCount()
         );
 
-        if (response.status() > 299) {
-            logger.error("Executing {} query is failed. Received status code is {}", operationName, response.status());
+        if (response.getStatus() > 299) {
+            logger.error("Executing {} query is failed. Received status code is {}", operationName, response.getStatus());
             manageErrorState(response);
         }
 
@@ -108,19 +108,19 @@ public class Client {
 
         Response response;
         try {
-            response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+            response = ResponseFactory.create(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
             buildErrorResponse(response);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
 
-        logger.error("{} http status received for {} query.", response.status(), operationName);
+        logger.error("{} http status received for {} query.", response.getStatus(), operationName);
 
         Response finalResponse = response;
         int i = 0;
         double waitInterval = 250.0;
         double waitRate = 1.4;
-        if (IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == finalResponse.status())) {
+        if (IntStream.of(RETRIABLE_HTTP_STATUSES).anyMatch(x -> x == finalResponse.getStatus())) {
             while ((i < options.getMaxRetries())) {
                 i++;
                 waitInterval *= waitRate;
@@ -136,7 +136,7 @@ public class Client {
                     throw new RuntimeException(e);
                 }
                 try {
-                    response = new Response(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+                    response = ResponseFactory.create(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
                     buildErrorResponse(response);
                     ErrorResponse errorResponse = response.getErrorResponse();
                     if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
@@ -146,7 +146,7 @@ public class Client {
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                if (response.status() < 300) {
+                if (response.getStatus() < 300) {
                     break;
                 }
             }
@@ -157,10 +157,10 @@ public class Client {
 
     private static void buildErrorResponse(Response response) {
         try {
-            if (response.status() > 299) {
+            if (response.getStatus() > 299) {
                 ObjectMapper mapper = new ObjectMapper();
                 ErrorResponse errResponse;
-                errResponse = mapper.readValue(response.body(), ErrorResponse.class);
+                errResponse = mapper.readValue(response.getBody(), ErrorResponse.class);
                 response.setErrorResponse(errResponse);
             }
         } catch (JsonProcessingException e) {
@@ -169,7 +169,7 @@ public class Client {
     }
     private static void manageErrorState(Response response) throws Exception {
         ErrorResponse errorResponse = response.getErrorResponse();
-        switch (response.status()) {
+        switch (response.getStatus()) {
             case 400:
                 if (errorResponse.isInvalidToken()) {
                     throw new InvalidAccessTokenError(response);
@@ -209,9 +209,9 @@ public class Client {
             case 504:
                 throw new GatewayTimeoutError(response);
             default:
-                if (response.status() >= 400 && response.status() < 500) {
+                if (response.getStatus() >= 400 && response.getStatus() < 500) {
                     throw new ClientError(response);
-                } else if (response.status() >= 500 && response.status() < 600) {
+                } else if (response.getStatus() >= 500 && response.getStatus() < 600) {
                     throw new ServerError(response);
                 } else {
                     throw new UnknownStatusError(response);

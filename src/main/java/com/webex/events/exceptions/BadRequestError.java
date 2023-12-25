@@ -4,7 +4,7 @@ import com.webex.events.Response;
 
 public class BadRequestError extends BaseException{
     public BadRequestError(Response response) {
-        super(response.body());
+        super(response.getBody());
         this.response = response;
     }
 }

@@ -33,6 +33,7 @@ class ClientTest {
         this.httpClient = mock(HttpClient.class);
         httpClientStatic.when( ()-> HttpClient.newHttpClient() ).thenReturn(httpClient);
         this.httpResponse = mock(HttpResponse.class);
+        when(httpResponse.body()).thenReturn("{}");
         Configuration.setAccessToken("sk_test_token_0190101010");
         Configuration.setMaxRetries(3);
     }
@@ -88,7 +89,7 @@ class ClientTest {
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
         Response response = Client.query(graphqlQuery, operationName, variables);
-        assertTrue(response.status() == 200);
+        assertTrue(response.getStatus() == 200);
     }
 
     @Test
@@ -99,7 +100,7 @@ class ClientTest {
         when(httpClient.send(any(),any())).thenReturn(httpResponse);
 
         final Response query = doRequest();
-        assertEquals(query.status(), 200);
+        assertEquals(query.getStatus(), 200);
         assertEquals(query.getRetryCount(), 0);
     }
 
@@ -121,7 +122,7 @@ class ClientTest {
         Exception exception = assertThrows(InvalidAccessTokenError.class, this::doRequest);
 
         Response response = ((InvalidAccessTokenError) exception).response();
-        assertTrue(response.status() == 400);
+        assertTrue(response.getStatus() == 400);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -143,7 +144,7 @@ class ClientTest {
         Exception exception = assertThrows(AccessTokenIsExpiredError.class, this::doRequest);
 
         Response response = ((AccessTokenIsExpiredError) exception).response();
-        assertTrue(response.status() == 400);
+        assertTrue(response.getStatus() == 400);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -156,7 +157,7 @@ class ClientTest {
         Exception exception = assertThrows(AuthenticationRequiredError.class, this::doRequest);
 
         Response response = ((AuthenticationRequiredError) exception).response();
-        assertTrue(response.status() == 401);
+        assertTrue(response.getStatus() == 401);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -169,7 +170,7 @@ class ClientTest {
         Exception exception = assertThrows(AuthorizationFailedError.class, this::doRequest);
 
         Response response = ((AuthorizationFailedError) exception).response();
-        assertTrue(response.status() == 403);
+        assertTrue(response.getStatus() == 403);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -182,7 +183,7 @@ class ClientTest {
         Exception exception = assertThrows(ResourceNotFoundError.class, this::doRequest);
 
         Response response = ((ResourceNotFoundError) exception).response();
-        assertTrue(response.status() == 404);
+        assertTrue(response.getStatus() == 404);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -195,7 +196,7 @@ class ClientTest {
         Exception exception = assertThrows(RequestTimeoutError.class, this::doRequest);
 
         Response response = ((RequestTimeoutError) exception).response();
-        assertTrue(response.status() == 408);
+        assertTrue(response.getStatus() == 408);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -209,7 +210,7 @@ class ClientTest {
         Exception exception = assertThrows(ConflictError.class, this::doRequest);
 
         Response response = ((ConflictError) exception).response();
-        assertTrue(response.status() == 409);
+        assertTrue(response.getStatus() == 409);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -223,7 +224,7 @@ class ClientTest {
         Exception exception = assertThrows(QueryComplexityIsTooHighError.class, this::doRequest);
 
         Response response = ((QueryComplexityIsTooHighError) exception).response();
-        assertTrue(response.status() == 413);
+        assertTrue(response.getStatus() == 413);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -236,7 +237,7 @@ class ClientTest {
         Exception exception = assertThrows(UnprocessableEntityError.class, this::doRequest);
 
         Response response = ((UnprocessableEntityError) exception).response();
-        assertTrue(response.status() == 422);
+        assertTrue(response.getStatus() == 422);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -259,7 +260,7 @@ class ClientTest {
         Exception exception = assertThrows(DailyQuotaIsReachedError.class, this::doRequest);
 
         Response response = ((DailyQuotaIsReachedError) exception).response();
-        assertTrue(response.status() == 429);
+        assertTrue(response.getStatus() == 429);
         assertEquals(1, response.getRetryCount());
     }
 
@@ -283,7 +284,7 @@ class ClientTest {
         Exception exception = assertThrows(SecondBasedQuotaIsReachedError.class, this::doRequest);
 
         Response response = ((SecondBasedQuotaIsReachedError) exception).response();
-        assertTrue(response.status() == 429);
+        assertTrue(response.getStatus() == 429);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -297,7 +298,7 @@ class ClientTest {
         Exception exception = assertThrows(ServerError.class, this::doRequest);
 
         Response response = ((ServerError) exception).response();
-        assertTrue(response.status() == 500);
+        assertTrue(response.getStatus() == 500);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -310,7 +311,7 @@ class ClientTest {
         Exception exception = assertThrows(BadGatewayError.class, this::doRequest);
 
         Response response = ((BadGatewayError) exception).response();
-        assertTrue(response.status() == 502);
+        assertTrue(response.getStatus() == 502);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -324,7 +325,7 @@ class ClientTest {
         Exception exception = assertThrows(ServiceUnavailableError.class, this::doRequest);
 
         Response response = ((ServiceUnavailableError) exception).response();
-        assertTrue(response.status() == 503);
+        assertTrue(response.getStatus() == 503);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -338,7 +339,7 @@ class ClientTest {
         Exception exception = assertThrows(GatewayTimeoutError.class, this::doRequest);
 
         Response response = ((GatewayTimeoutError) exception).response();
-        assertTrue(response.status() == 504);
+        assertTrue(response.getStatus() == 504);
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -352,7 +353,7 @@ class ClientTest {
         Exception exception = assertThrows(ClientError.class, this::doRequest);
 
         Response response = ((ClientError) exception).response();
-        assertTrue(response.status() == 420);
+        assertTrue(response.getStatus() == 420);
         assertEquals(response.getRetryCount(), 0);
     }
 
@@ -365,7 +366,7 @@ class ClientTest {
         Exception exception = assertThrows(ServerError.class, this::doRequest);
 
         Response response = ((ServerError) exception).response();
-        assertTrue(response.status() == 510);
+        assertTrue(response.getStatus() == 510);
         assertEquals(response.getRetryCount(), 0);
     }
 }
