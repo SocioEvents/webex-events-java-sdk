@@ -4,13 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.error.ErrorResponse;
 import com.webex.events.exceptions.*;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -66,21 +67,18 @@ public class Client {
             headers.put("Idempotency-Key", options.getIdempotencyKey());
         }
 
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(Helpers.getUri(options.getAccessToken()));
+        HttpPost httpPost = new HttpPost(Helpers.getUri(options.getAccessToken()));
 
         for (Map.Entry<String, String> header : headers.entrySet()) {
-            requestBuilder.header(header.getKey(), (String) header.getValue());
+            httpPost.setHeader(header.getKey(), header.getValue());
         }
 
-        HttpRequest request = requestBuilder
-                .timeout(options.getTimeout())
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+        StringEntity entity = new StringEntity(json);
+        httpPost.setEntity(entity);
 
         long startTime = System.currentTimeMillis();
-        HttpClient httpClient = HttpClient.newHttpClient();
-        Response response = doOrRetryTheRequest(httpClient, request, operationName, options);
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        Response response = doOrRetryTheRequest(httpClient, httpPost, operationName, options);
         long endTime = System.currentTimeMillis();
 
         response.setTimeSpentInMs((int) (endTime - startTime));
@@ -103,14 +101,14 @@ public class Client {
         return response;
     }
 
-    private static Response doOrRetryTheRequest(HttpClient httpClient, HttpRequest request, String operationName, RequestOptions options) {
+    private static Response doOrRetryTheRequest(CloseableHttpClient httpClient, HttpPost httpPost, String operationName, RequestOptions options) {
         logger.info("Executing {} query for the first time to {}", operationName, Helpers.getUri(options.getAccessToken()));
 
         Response response;
         try {
-            response = ResponseFactory.create(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+            response = ResponseFactory.create(httpClient.execute(httpPost), httpPost);
             buildErrorResponse(response);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
@@ -125,7 +123,7 @@ public class Client {
                 i++;
                 waitInterval *= waitRate;
                 logger.info(
-                        "The HTTP request is being restarted for {} query. Waiting for {} ms...",
+                        "The HTTP httpPost is being restarted for {} query. Waiting for {} ms...",
                         operationName,
                         (int) waitInterval
                 );
@@ -136,14 +134,14 @@ public class Client {
                     throw new RuntimeException(e);
                 }
                 try {
-                    response = ResponseFactory.create(httpClient.send(request, HttpResponse.BodyHandlers.ofString()));
+                    response = ResponseFactory.create(httpClient.execute(httpPost), httpPost);
                     buildErrorResponse(response);
                     ErrorResponse errorResponse = response.getErrorResponse();
                     if (errorResponse != null && errorResponse.dailyAvailableCostIsReached()) {
                         break;
                     }
 
-                } catch (IOException | InterruptedException e) {
+                } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
                 if (response.getStatus() < 300) {

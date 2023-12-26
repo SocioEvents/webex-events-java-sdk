@@ -6,25 +6,26 @@ import com.webex.events.error.ErrorResponse;
 import com.webex.events.error.Extensions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
-import java.util.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ErrorResponseTest {
 
     @Test
     void testRecordInvalid() throws JsonProcessingException {
-        HashMap<String, Object> data = new HashMap<>() {
-            {
-                put("message", "Record is invalid.");
-                put("extensions", new HashMap<String, Object>(){{
-                    put("code", "RECORD_INVALID");
-                    put("errors", new HashMap<String, String[]>(){{
-                        put("first_name", new String[]{"invalid", "taken"});
-                    }});
-                }});
-            }
-        };
+        HashMap<String, Object> data = new HashMap<>();
+        data.put("message", "Record is invalid.");
+
+        HashMap<String, Object> extensions = new HashMap<>();
+        extensions.put("code", "RECORD_INVALID");
+
+        HashMap<String, Object> errors = new HashMap<>();
+        errors.put("first_name", new String[]{"invalid", "taken"});
+        extensions.put("errors", errors);
+        data.put("extensions", extensions);
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(data);
@@ -35,28 +36,26 @@ public class ErrorResponseTest {
 
         assertEquals("Record is invalid.", errResponse.getMessage());
         assertEquals("RECORD_INVALID", errResponse.getCode());
-        HashMap<String, List<String>> errorList = new HashMap<>(){
-            {
-                List<String> errors = Arrays.asList("invalid", "taken");
-               put("first_name", errors);
-            }
-        };
 
-        Extensions extensions = errResponse.extensions;
-        assertEquals(errorList.get("first_name"), extensions.getErrors().get("first_name"));
+
+        HashMap<String, List<String>> errorList = new HashMap<>();
+        List<String> _errors = Arrays.asList("invalid", "taken");
+        errorList.put("first_name", _errors);
+
+        Extensions ext = errResponse.extensions;
+        assertEquals(errorList.get("first_name"), ext.getErrors().get("first_name"));
     }
 
     @Test
     void testServerError() throws JsonProcessingException {
-        HashMap<String, Object> data = new HashMap<>() {
-            {
-                put("message", "Server Error");
-                put("extensions", new HashMap<String, Object>(){{
-                    put("code", "INTERNAL_SERVER_ERROR");
-                    put("referenceId", "somereferenceid");
-                }});
-            }
-        };
+
+        HashMap<String, Object> data = new HashMap<>();
+        data.put("message", "Server Error");
+        HashMap<String, Object> extensions = new HashMap<>();
+        extensions.put("code", "INTERNAL_SERVER_ERROR");
+        extensions.put("referenceId", "somereferenceid");
+
+        data.put("extensions", extensions);
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(data);
@@ -72,19 +71,19 @@ public class ErrorResponseTest {
 
     @Test
     void testRateLimitingDetails() throws JsonProcessingException {
-        HashMap<String, Object> data = new HashMap<>() {
-            {
-                put("message", "Max cost exceed.");
-                put("extensions", new HashMap<String, Object>(){{
-                    put("code", "MAX_COST_EXCEEDED");
-                    put("cost", 45);
-                    put("availableCost", 5);
-                    put("threshold", 50);
-                    put("dailyThreshold", 200);
-                    put("dailyAvailableCost", 190);
-                }});
-            }
-        };
+
+        HashMap<String, Object> data = new HashMap<>();
+        data.put("message", "Max cost exceed.");
+
+        HashMap<String, Object> extensions = new HashMap<>();
+        extensions.put("code", "MAX_COST_EXCEEDED");
+        extensions.put("cost", 45);
+        extensions.put("availableCost", 5);
+        extensions.put("threshold", 50);
+        extensions.put("dailyThreshold", 200);
+        extensions.put("dailyAvailableCost", 190);
+
+        data.put("extensions", extensions);
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(data);

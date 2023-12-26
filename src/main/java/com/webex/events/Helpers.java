@@ -1,7 +1,6 @@
 package com.webex.events;
 
 import com.webex.events.exceptions.AccessTokenIsRequiredError;
-import com.webex.events.exceptions.InvalidUUIDFormatError;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -10,7 +9,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 public class Helpers {
     public static final String ACCESS_TOKEN_IS_MISSING = "Access token is missing.";
@@ -66,8 +64,10 @@ public class Helpers {
         String url;
         if (accessToken.startsWith("sk_live")) {
             url = "https://public.api.socio.events" + path;
-        } else {
+        } else if(accessToken.startsWith("sk_test")) {
             url = "https://public.sandbox-api.socio.events" + path;
+        }else {
+            url = "http://localhost:8080" + path; // This is for WireMockServer
         }
 
         URI uri = URI.create(url);
