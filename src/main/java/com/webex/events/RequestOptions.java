@@ -1,12 +1,10 @@
 package com.webex.events;
 
-import java.time.Duration;
-
 public class RequestOptions {
 
     private String accessToken = Configuration.getAccessToken();
     private int maxRetries = Configuration.getMaxRetries();
-    private Duration timeout = Configuration.getTimeout();
+    private int timeout = Configuration.getTimeout();
     private String idempotencyKey;
 
     public static RequestOptions NewBuilder(){
@@ -31,11 +29,11 @@ public class RequestOptions {
         return this;
     }
 
-    public Duration getTimeout(){
+    public int getTimeout(){
         return this.timeout;
     }
 
-    public RequestOptions setTimeout(Duration timeout) {
+    public RequestOptions setTimeout(int timeout) {
         this.timeout = timeout;
         return this;
     }

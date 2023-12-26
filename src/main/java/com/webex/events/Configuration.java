@@ -1,11 +1,9 @@
 package com.webex.events;
 
-import java.time.Duration;
-
 public class Configuration {
     private static String accessToken;
 
-    private static Duration timeout = Duration.ofSeconds(30);
+    private static int timeout = 30;
     private static int maxRetries = 5;
 
 
@@ -16,11 +14,11 @@ public class Configuration {
         return accessToken;
     }
 
-    public static Duration getTimeout() {
+    public static int getTimeout() {
         return timeout;
     }
 
-    public static void setTimeout(Duration timeout) {
+    public static void setTimeout(int timeout) {
         Configuration.timeout = timeout;
     }
 

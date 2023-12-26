@@ -4,10 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.error.ErrorResponse;
 import com.webex.events.exceptions.*;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,8 +77,15 @@ public class Client {
         StringEntity entity = new StringEntity(json);
         httpPost.setEntity(entity);
 
+        int timeout = 5;
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(options.getTimeout() * 1000)
+                .setConnectionRequestTimeout(timeout * 1000)
+                .setSocketTimeout(timeout * 1000).build();
+        CloseableHttpClient httpClient = HttpClientBuilder.create().setDefaultRequestConfig(config).build();
+
+
         long startTime = System.currentTimeMillis();
-        CloseableHttpClient httpClient = HttpClients.createDefault();
         Response response = doOrRetryTheRequest(httpClient, httpPost, operationName, options);
         long endTime = System.currentTimeMillis();
 
