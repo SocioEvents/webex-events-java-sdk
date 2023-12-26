@@ -1,52 +1,36 @@
 package com.webex.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.webex.events.exceptions.*;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicHeader;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class ClientTest {
+    public static WireMockServer wm;
 
-    private CloseableHttpResponse httpResponse;
-    private CloseableHttpClient httpClient;
-    private MockedStatic<HttpClients> httpClientStatic;
-
-    @BeforeEach
-    void beforeEach() throws UnsupportedEncodingException {
-        this.httpClientStatic = mockStatic(HttpClients.class);
-        this.httpClient = mock(CloseableHttpClient.class);
-        httpClientStatic.when( ()-> HttpClients.createDefault() ).thenReturn(httpClient);
-        this.httpResponse = mock(CloseableHttpResponse.class);
-        when(httpResponse.getEntity()).thenReturn(new StringEntity("{}"));
-        Configuration.setAccessToken("sk_test_token_0190101010");
-        Configuration.setMaxRetries(3);
+    @BeforeAll
+    static void beforeAll() {
+        wm = new WireMockServer(options().port(8080));
+        wm.start();
     }
 
-    @AfterEach
-    void afterEach() {
-        httpClientStatic.close();
+    @AfterAll
+    static void afterAll() {
+        wm.stop();
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        Configuration.setAccessToken("sk_wiremock_token_0190101010");
+        Configuration.setMaxRetries(3);
     }
 
     Response doRequest() throws Exception {
@@ -60,13 +44,11 @@ class ClientTest {
     }
 
     void mockRequest(int statusCode, String response) throws IOException {
-        StatusLine mockStatusLine = Mockito.mock(StatusLine.class);
-        when(mockStatusLine.getStatusCode()).thenReturn(statusCode);
-        when(httpResponse.getStatusLine()).thenReturn(mockStatusLine);
-        when(httpClient.execute(any())).thenReturn(httpResponse);
-        when(httpResponse.getAllHeaders()).thenReturn(new BasicHeader[]{new BasicHeader("Content-Type", "application/json")});
-        when(httpResponse.getEntity()).thenReturn(new StringEntity(response));
-
+        stubFor(post(urlEqualTo("/graphql"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withStatus(statusCode)
+                        .withBody(response)));
     }
     @Test
     @DisplayName("It does introspection query")
@@ -142,7 +124,9 @@ class ClientTest {
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonObject);
+
         mockRequest(400, json);
+
         AccessTokenIsExpiredError exception = assertThrows(AccessTokenIsExpiredError.class, this::doRequest);
 
         Response response = exception.response();
@@ -154,6 +138,7 @@ class ClientTest {
     @DisplayName("Should throw AuthenticationRequiredError exception.")
     void statusCode401() throws Exception {
         mockRequest(401, "{}");
+
         AuthenticationRequiredError exception = assertThrows(AuthenticationRequiredError.class, this::doRequest);
 
         Response response = exception.response();
@@ -165,6 +150,7 @@ class ClientTest {
     @DisplayName("Should throw AuthorizationFailedError exception.")
     void statusCode403() throws Exception {
         mockRequest(403, "{}");
+
         AuthorizationFailedError exception = assertThrows(AuthorizationFailedError.class, this::doRequest);
 
         Response response = exception.response();
@@ -176,6 +162,7 @@ class ClientTest {
     @DisplayName("Should throw ResourceNotFoundError exception.")
     void statusCode404() throws Exception {
         mockRequest(404, "{}");
+
         ResourceNotFoundError exception = assertThrows(ResourceNotFoundError.class, this::doRequest);
 
         Response response = exception.response();
@@ -226,6 +213,7 @@ class ClientTest {
     @DisplayName("Should throw UnprocessableEntityError exception")
     void statusCode422() throws Exception {
         mockRequest(422, "{}");
+
         UnprocessableEntityError exception = assertThrows(UnprocessableEntityError.class, this::doRequest);
 
         Response response = exception.response();
@@ -246,7 +234,6 @@ class ClientTest {
         String json = objectMapper.writeValueAsString(jsonObject);
 
         mockRequest(429, json);
-
 
         DailyQuotaIsReachedError exception = assertThrows(DailyQuotaIsReachedError.class, this::doRequest);
 
@@ -282,6 +269,7 @@ class ClientTest {
     @DisplayName("Should throw ServerError exception")
     void statusCode500() throws Exception {
         mockRequest(500, "{}");
+
         ServerError exception = assertThrows(ServerError.class, this::doRequest);
 
         Response response = exception.response();
@@ -294,6 +282,7 @@ class ClientTest {
     @DisplayName("Should throw BadGatewayError exception and does retry the request.")
     void statusCode502() throws Exception {
         mockRequest(502, "{}");
+
         BadGatewayError exception = assertThrows(BadGatewayError.class, this::doRequest);
 
         Response response = exception.response();
@@ -306,6 +295,7 @@ class ClientTest {
     @DisplayName("Should throw ServiceUnavailableError exception and does retry the request.")
     void statusCode503() throws Exception {
         mockRequest(503, "{}");
+
         ServiceUnavailableError exception = assertThrows(ServiceUnavailableError.class, this::doRequest);
 
         Response response = exception.response();
@@ -319,6 +309,7 @@ class ClientTest {
     @DisplayName("Should throw GatewayTimeoutError exception and does retry the request.")
     void statusCode504() throws Exception {
         mockRequest(504, "{}");
+
         GatewayTimeoutError exception = assertThrows(GatewayTimeoutError.class, this::doRequest);
 
         Response response = exception.response();
@@ -331,6 +322,7 @@ class ClientTest {
     @DisplayName("Should throw ClientError exception")
     void statusCode420() throws Exception {
         mockRequest(420, "{}");
+
         ClientError exception = assertThrows(ClientError.class, this::doRequest);
 
         Response response = exception.response();
@@ -343,6 +335,7 @@ class ClientTest {
     @DisplayName("Should throw ServerError exception")
     void statusCode510() throws Exception {
         mockRequest(510, "{}");
+
         ServerError exception = assertThrows(ServerError.class, this::doRequest);
 
         Response response = exception.response();

@@ -6,9 +6,11 @@ import com.webex.events.error.ErrorResponse;
 import com.webex.events.error.Extensions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
-import java.util.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ErrorResponseTest {
 
