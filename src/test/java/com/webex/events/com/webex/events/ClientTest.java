@@ -2,17 +2,23 @@ package com.webex.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webex.events.exceptions.*;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.net.http.HttpClient;
-import java.net.http.HttpResponse;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,17 +29,17 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ClientTest {
 
-    private HttpResponse httpResponse;
-    private HttpClient  httpClient;
-    private MockedStatic<HttpClient> httpClientStatic;
+    private CloseableHttpResponse httpResponse;
+    private CloseableHttpClient httpClient;
+    private MockedStatic<HttpClients> httpClientStatic;
 
     @BeforeEach
-    void beforeEach() {
-        this.httpClientStatic = mockStatic(HttpClient.class);
-        this.httpClient = mock(HttpClient.class);
-        httpClientStatic.when( ()-> HttpClient.newHttpClient() ).thenReturn(httpClient);
-        this.httpResponse = mock(HttpResponse.class);
-        when(httpResponse.body()).thenReturn("{}");
+    void beforeEach() throws UnsupportedEncodingException {
+        this.httpClientStatic = mockStatic(HttpClients.class);
+        this.httpClient = mock(CloseableHttpClient.class);
+        httpClientStatic.when( ()-> HttpClients.createDefault() ).thenReturn(httpClient);
+        this.httpResponse = mock(CloseableHttpResponse.class);
+        when(httpResponse.getEntity()).thenReturn(new StringEntity("{}"));
         Configuration.setAccessToken("sk_test_token_0190101010");
         Configuration.setMaxRetries(3);
     }
@@ -53,22 +59,27 @@ class ClientTest {
         return Client.query(graphqlQuery, operationName, variables, options);
     }
 
+    void mockRequest(int statusCode, String response) throws IOException {
+        StatusLine mockStatusLine = Mockito.mock(StatusLine.class);
+        when(mockStatusLine.getStatusCode()).thenReturn(statusCode);
+        when(httpResponse.getStatusLine()).thenReturn(mockStatusLine);
+        when(httpClient.execute(any())).thenReturn(httpResponse);
+        when(httpResponse.getAllHeaders()).thenReturn(new BasicHeader[]{new BasicHeader("Content-Type", "application/json")});
+        when(httpResponse.getEntity()).thenReturn(new StringEntity(response));
+
+    }
     @Test
     @DisplayName("It does introspection query")
     void doesIntrospectionQuery() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
-        when(httpResponse.body()).thenReturn("introspection");
-
+        mockRequest(200, "introspection");
         String response = Client.doIntrospectQuery();
-        assertTrue("introspection" == response);
+        assertEquals("introspection", response);
     }
 
     @Test
     @DisplayName("Should raise AccessTokenIsRequired exception without given access token")
     void withoutAccessToken() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(200, "{}");
         final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
@@ -77,28 +88,25 @@ class ClientTest {
             Client.query(graphqlQuery, operationName, variables);
         });
 
-        assertTrue(Objects.equals(exception.getMessage(), "Access token is missing."));
+        assertEquals("Access token is missing.", exception.getMessage());
     }
+
 
     @Test
     @DisplayName("Should not raise without given parameters")
     void withoutParams() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(200, "{}");
         final String graphqlQuery = "query CurrenciesList{ currenciesList { isoCode}}";
         final String operationName = "CurrenciesList";
         final HashMap<String, Object> variables = new HashMap<>();
         Response response = Client.query(graphqlQuery, operationName, variables);
-        assertTrue(response.getStatus() == 200);
+        assertEquals(200, response.getStatus());
     }
 
     @Test
     @DisplayName("Should return 200 and does not throw exception.")
     void successCase() throws Exception {
-
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
-
+        mockRequest(200, "{}");
         final Response query = doRequest();
         assertEquals(query.getStatus(), 200);
         assertEquals(query.getRetryCount(), 0);
@@ -107,7 +115,6 @@ class ClientTest {
     @Test
     @DisplayName("Should throw InvalidAccessTokenError exception.")
     void statusCode400WithInvalidToken() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(400);
         HashMap<String, Object> jsonObject = new HashMap<>();
         HashMap<String, String> code = new HashMap<>();
         code.put("code", "INVALID_TOKEN");
@@ -116,20 +123,18 @@ class ClientTest {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonObject);
 
-        when(httpResponse.body()).thenReturn(json);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(400, json);;
 
-        Exception exception = assertThrows(InvalidAccessTokenError.class, this::doRequest);
+        InvalidAccessTokenError exception = assertThrows(InvalidAccessTokenError.class, this::doRequest);
 
-        Response response = ((InvalidAccessTokenError) exception).response();
-        assertTrue(response.getStatus() == 400);
+        Response response = exception.response();
+        assertEquals(400, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 
     @Test
     @DisplayName("Should throw AccessTokenIsExpiredError exception.")
     void statusCode400WithTokenIsExpired() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(400);
         HashMap<String, Object> jsonObject = new HashMap<>();
         HashMap<String, String> code = new HashMap<>();
         code.put("code", "TOKEN_IS_EXPIRED");
@@ -137,66 +142,57 @@ class ClientTest {
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonObject);
+        mockRequest(400, json);
+        AccessTokenIsExpiredError exception = assertThrows(AccessTokenIsExpiredError.class, this::doRequest);
 
-        when(httpResponse.body()).thenReturn(json);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
-
-        Exception exception = assertThrows(AccessTokenIsExpiredError.class, this::doRequest);
-
-        Response response = ((AccessTokenIsExpiredError) exception).response();
-        assertTrue(response.getStatus() == 400);
+        Response response = exception.response();
+        assertEquals(400, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 
     @Test
     @DisplayName("Should throw AuthenticationRequiredError exception.")
     void statusCode401() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(401);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(401, "{}");
+        AuthenticationRequiredError exception = assertThrows(AuthenticationRequiredError.class, this::doRequest);
 
-        Exception exception = assertThrows(AuthenticationRequiredError.class, this::doRequest);
-
-        Response response = ((AuthenticationRequiredError) exception).response();
-        assertTrue(response.getStatus() == 401);
+        Response response = exception.response();
+        assertEquals(401, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 
     @Test
     @DisplayName("Should throw AuthorizationFailedError exception.")
     void statusCode403() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(403);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(403, "{}");
+        AuthorizationFailedError exception = assertThrows(AuthorizationFailedError.class, this::doRequest);
 
-        Exception exception = assertThrows(AuthorizationFailedError.class, this::doRequest);
-
-        Response response = ((AuthorizationFailedError) exception).response();
-        assertTrue(response.getStatus() == 403);
+        Response response = exception.response();
+        assertEquals(403, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 
     @Test
     @DisplayName("Should throw ResourceNotFoundError exception.")
     void statusCode404() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(404);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(404, "{}");
+        ResourceNotFoundError exception = assertThrows(ResourceNotFoundError.class, this::doRequest);
 
-        Exception exception = assertThrows(ResourceNotFoundError.class, this::doRequest);
-
-        Response response = ((ResourceNotFoundError) exception).response();
-        assertTrue(response.getStatus() == 404);
+        Response response = exception.response();
+        assertEquals(404, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
+
 
     @Test
     @DisplayName("Should throw RequestTimeoutError exception and does retry the request again.")
     void statusCode408() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(408);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(408, "{}");
 
-        Exception exception = assertThrows(RequestTimeoutError.class, this::doRequest);
+        RequestTimeoutError exception = assertThrows(RequestTimeoutError.class, this::doRequest);
 
-        Response response = ((RequestTimeoutError) exception).response();
-        assertTrue(response.getStatus() == 408);
+        Response response = exception.response();
+        assertEquals(408, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -204,13 +200,12 @@ class ClientTest {
     @Test
     @DisplayName("Should throw ConflictError exception and does retry the request again.")
     void statusCode409() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(409);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(409, "{}");
 
-        Exception exception = assertThrows(ConflictError.class, this::doRequest);
+        ConflictError exception = assertThrows(ConflictError.class, this::doRequest);
 
-        Response response = ((ConflictError) exception).response();
-        assertTrue(response.getStatus() == 409);
+        Response response = exception.response();
+        assertEquals(409, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -218,33 +213,30 @@ class ClientTest {
     @Test
     @DisplayName("Should throw QueryComplexityIsTooHighError exception")
     void statusCode413() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(413);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(413, "{}");
 
-        Exception exception = assertThrows(QueryComplexityIsTooHighError.class, this::doRequest);
+        QueryComplexityIsTooHighError exception = assertThrows(QueryComplexityIsTooHighError.class, this::doRequest);
 
-        Response response = ((QueryComplexityIsTooHighError) exception).response();
-        assertTrue(response.getStatus() == 413);
+        Response response = exception.response();
+        assertEquals(413, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 
     @Test
     @DisplayName("Should throw UnprocessableEntityError exception")
     void statusCode422() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(422);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(422, "{}");
+        UnprocessableEntityError exception = assertThrows(UnprocessableEntityError.class, this::doRequest);
 
-        Exception exception = assertThrows(UnprocessableEntityError.class, this::doRequest);
-
-        Response response = ((UnprocessableEntityError) exception).response();
-        assertTrue(response.getStatus() == 422);
+        Response response = exception.response();
+        assertEquals(422, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
+
 
     @Test
     @DisplayName("Should throw DailyQuotaIsReachedError exception when daily available cost is zero")
     void statusCode429WithDailyQuotaReached() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(429);
         HashMap<String, Object> jsonObject = new HashMap<>();
         HashMap<String, Object> code = new HashMap<>();
         code.put("dailyAvailableCost", 0);
@@ -253,21 +245,19 @@ class ClientTest {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonObject);
 
-        when(httpResponse.body()).thenReturn(json);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(429, json);
 
 
-        Exception exception = assertThrows(DailyQuotaIsReachedError.class, this::doRequest);
+        DailyQuotaIsReachedError exception = assertThrows(DailyQuotaIsReachedError.class, this::doRequest);
 
-        Response response = ((DailyQuotaIsReachedError) exception).response();
-        assertTrue(response.getStatus() == 429);
+        Response response = exception.response();
+        assertEquals(429, response.getStatus());
         assertEquals(1, response.getRetryCount());
     }
 
     @Test
     @DisplayName("Should throw SecondBasedQuotaIsReachedError exception when secondly available cost is zero and does retry the request")
     void statusCode429WithSecondlyQuotaReached() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(429);
         HashMap<String, Object> jsonObject = new HashMap<>();
         HashMap<String, Object> code = new HashMap<>();
         code.put("availableCost", 0);
@@ -277,41 +267,37 @@ class ClientTest {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(jsonObject);
 
-        when(httpResponse.body()).thenReturn(json);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(429, json);
 
+        SecondBasedQuotaIsReachedError exception = assertThrows(SecondBasedQuotaIsReachedError.class, this::doRequest);
 
-        Exception exception = assertThrows(SecondBasedQuotaIsReachedError.class, this::doRequest);
-
-        Response response = ((SecondBasedQuotaIsReachedError) exception).response();
-        assertTrue(response.getStatus() == 429);
+        Response response = exception.response();
+        assertEquals(429, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
 
+
     @Test
     @DisplayName("Should throw ServerError exception")
     void statusCode500() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(500);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(500, "{}");
+        ServerError exception = assertThrows(ServerError.class, this::doRequest);
 
-        Exception exception = assertThrows(ServerError.class, this::doRequest);
-
-        Response response = ((ServerError) exception).response();
-        assertTrue(response.getStatus() == 500);
+        Response response = exception.response();
+        assertEquals(500, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
+
 
     @Test
     @DisplayName("Should throw BadGatewayError exception and does retry the request.")
     void statusCode502() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(502);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(502, "{}");
+        BadGatewayError exception = assertThrows(BadGatewayError.class, this::doRequest);
 
-        Exception exception = assertThrows(BadGatewayError.class, this::doRequest);
-
-        Response response = ((BadGatewayError) exception).response();
-        assertTrue(response.getStatus() == 502);
+        Response response = exception.response();
+        assertEquals(502, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -319,27 +305,24 @@ class ClientTest {
     @Test
     @DisplayName("Should throw ServiceUnavailableError exception and does retry the request.")
     void statusCode503() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(503);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(503, "{}");
+        ServiceUnavailableError exception = assertThrows(ServiceUnavailableError.class, this::doRequest);
 
-        Exception exception = assertThrows(ServiceUnavailableError.class, this::doRequest);
-
-        Response response = ((ServiceUnavailableError) exception).response();
-        assertTrue(response.getStatus() == 503);
+        Response response = exception.response();
+        assertEquals(503, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
 
+
     @Test
     @DisplayName("Should throw GatewayTimeoutError exception and does retry the request.")
     void statusCode504() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(504);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(504, "{}");
+        GatewayTimeoutError exception = assertThrows(GatewayTimeoutError.class, this::doRequest);
 
-        Exception exception = assertThrows(GatewayTimeoutError.class, this::doRequest);
-
-        Response response = ((GatewayTimeoutError) exception).response();
-        assertTrue(response.getStatus() == 504);
+        Response response = exception.response();
+        assertEquals(504, response.getStatus());
         assertEquals(response.getRetryCount(), 3);
         assertTrue(response.getTimeSpendInMs() > 0);
     }
@@ -347,26 +330,23 @@ class ClientTest {
     @Test
     @DisplayName("Should throw ClientError exception")
     void statusCode420() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(420);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(420, "{}");
+        ClientError exception = assertThrows(ClientError.class, this::doRequest);
 
-        Exception exception = assertThrows(ClientError.class, this::doRequest);
-
-        Response response = ((ClientError) exception).response();
-        assertTrue(response.getStatus() == 420);
+        Response response = exception.response();
+        assertEquals(420, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
+
 
     @Test
     @DisplayName("Should throw ServerError exception")
     void statusCode510() throws Exception {
-        when(httpResponse.statusCode()).thenReturn(510);
-        when(httpClient.send(any(),any())).thenReturn(httpResponse);
+        mockRequest(510, "{}");
+        ServerError exception = assertThrows(ServerError.class, this::doRequest);
 
-        Exception exception = assertThrows(ServerError.class, this::doRequest);
-
-        Response response = ((ServerError) exception).response();
-        assertTrue(response.getStatus() == 510);
+        Response response = exception.response();
+        assertEquals(510, response.getStatus());
         assertEquals(response.getRetryCount(), 0);
     }
 }

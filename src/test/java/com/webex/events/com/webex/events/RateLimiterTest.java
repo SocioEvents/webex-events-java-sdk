@@ -12,7 +12,6 @@ import org.mockito.quality.Strictness;
 
 import java.io.IOException;
 import java.util.*;
-import java.net.http.HttpHeaders;
 
 import static org.mockito.Mockito.when;
 

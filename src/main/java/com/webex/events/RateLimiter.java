@@ -1,6 +1,5 @@
 package com.webex.events;
 
-import java.net.http.HttpHeaders;
 import java.util.HashMap;
 
 public class RateLimiter {
