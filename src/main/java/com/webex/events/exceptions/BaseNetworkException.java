@@ -2,7 +2,7 @@ package com.webex.events.exceptions;
 
 import com.webex.events.Response;
 
-abstract class BaseException extends Exception implements ExceptionImpl {
+abstract class BaseNetworkException extends Exception implements NetworkException {
 
     Response response;
     String message;
@@ -12,7 +12,7 @@ abstract class BaseException extends Exception implements ExceptionImpl {
         return response;
     }
 
-    public BaseException(String message) {
+    public BaseNetworkException(String message) {
         super(message);
         this.message = message;
     }
